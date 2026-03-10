@@ -123,17 +123,21 @@ const INIT_TEMPLATES = [
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const getProgress = (client) => {
-  const all = [...Object.values(client.docs), ...Object.values(client.infos), ...Object.values(client.comms)];
-  return Math.round((all.filter(Boolean).length / all.length) * 100);
+  const docsDone  = DOCUMENT_LIST.filter(d => !!client.docs?.[d.id]).length;
+  const infosDone = INFO_LIST.filter(i => !!String(client.infos?.[i.id] || "").trim()).length;
+  const commsDone = COMM_LIST.filter(c => !!client.comms?.[c.id]).length;
+  const total = DOCUMENT_LIST.length + INFO_LIST.length + COMM_LIST.length;
+  const done  = docsDone + infosDone + commsDone;
+  return Math.round((done / total) * 100);
 };
 
 const getStatusColor = (s) => s === "complete" ? "#34C759" : s === "in_progress" ? "#FF9F0A" : "#FF3B30";
 const getStatusLabel = (s) => s === "complete" ? "Complet" : s === "in_progress" ? "En cours" : "En attente";
 
 const getMissingLabels = (client) => [
-  ...DOCUMENT_LIST.filter((d) => !client.docs[d.id]).map((d) => d.label),
-  ...INFO_LIST.filter((i) => !client.infos[i.id]).map((i) => i.label),
-  ...COMM_LIST.filter((c) => !client.comms[c.id]).map((c) => c.label),
+  ...DOCUMENT_LIST.filter((d) => !client.docs?.[d.id]).map((d) => d.label),
+  ...INFO_LIST.filter((i) => !String(client.infos?.[i.id] || "").trim()).map((i) => i.label),
+  ...COMM_LIST.filter((c) => !client.comms?.[c.id]).map((c) => c.label),
 ];
 
 const formatDateTime = (iso) => {
