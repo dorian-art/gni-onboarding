@@ -228,7 +228,19 @@ export default function GNIApp() {
           }));
           const result = await sb.from("clients").upsert(mockData);
           console.log("Insert mock result:", result);
-          setClients(MOCK_CLIENTS);
+          setClients(mockData.map(c => ({
+            id:             c.id,
+            name:           c.name,
+            email:          c.email || "",
+            phone:          c.phone || "",
+            advisor:        c.advisor,
+            status:         c.status,
+            createdAt:      c.created_at ? new Date(c.created_at).toLocaleDateString("fr-FR") : "",
+            docs:           c.documents || {},
+            infos:          c.informations || {},
+            comms:          c.communication || {},
+            relanceHistory: c.relance_history || [],
+          })));
         }
       } catch (e) {
         console.error("Supabase load error:", e);
@@ -278,8 +290,13 @@ export default function GNIApp() {
       };
       console.log("Saving client:", payload);
       const res = await sb.from("clients").upsert(payload);
-      console.log("Save response status:", res.status, res);
-    } catch (e) { console.error("Save error:", e); }
+      if (res && res.status && res.status >= 400) {
+        showNotif("Erreur lors de la sauvegarde. Vérifiez votre connexion.");
+      }
+    } catch (e) {
+      console.error("Save error:", e);
+      showNotif("Erreur lors de la sauvegarde. Vérifiez votre connexion.");
+    }
   };
 
   const addClientToDb = async (client) => {
@@ -777,9 +794,9 @@ export default function GNIApp() {
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 12 }}>
                       {group.map((client, idx) => {
                         const prog      = getProgress(client);
-                        const docsDone  = Object.values(client.docs).filter(Boolean).length;
-                        const infosDone = Object.values(client.infos).filter(Boolean).length;
-                        const commsDone = Object.values(client.comms).filter(Boolean).length;
+                        const docsDone  = DOCUMENT_LIST.filter(d => !!client.docs?.[d.id]).length;
+                        const infosDone = INFO_LIST.filter(i => !!String(client.infos?.[i.id] || "").trim()).length;
+                        const commsDone = COMM_LIST.filter(c => !!client.comms?.[c.id]).length;
                         return (
                           <div key={client.id} onClick={() => setSelectedClient(client)}
                             style={{ background: "white", borderRadius: 16, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,.05)", border: "1px solid rgba(0,0,0,.04)", cursor: "pointer", transition: "transform .2s,box-shadow .2s", position: "relative" }}
@@ -836,9 +853,9 @@ export default function GNIApp() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(320px,1fr))", gap: 16 }}>
                 {visibleClients.map((client) => {
                   const prog = getProgress(client);
-                  const docsDone  = Object.values(client.docs).filter(Boolean).length;
-                  const infosDone = Object.values(client.infos).filter(Boolean).length;
-                  const commsDone = Object.values(client.comms).filter(Boolean).length;
+                  const docsDone  = DOCUMENT_LIST.filter(d => !!client.docs?.[d.id]).length;
+                  const infosDone = INFO_LIST.filter(i => !!String(client.infos?.[i.id] || "").trim()).length;
+                  const commsDone = COMM_LIST.filter(c => !!client.comms?.[c.id]).length;
                   return (
                     <div key={client.id} onClick={() => setSelectedClient(client)}
                       style={{ background: "white", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)", border: "1px solid rgba(0,0,0,.04)", cursor: "pointer", transition: "transform .2s,box-shadow .2s" }}
@@ -892,9 +909,9 @@ export default function GNIApp() {
         {view === "clients" && selectedClient && (() => {
           const client = clients.find((c) => c.id === selectedClient.id);
           const prog = getProgress(client);
-          const docsFull  = Object.values(client.docs).filter(Boolean).length  === DOCUMENT_LIST.length;
-          const infosFull = INFO_LIST.filter(item => String(client.infos?.[item.id] || "").trim()).length === INFO_LIST.length;
-          const commsFull = Object.values(client.comms).filter(Boolean).length === COMM_LIST.length;
+          const docsFull  = DOCUMENT_LIST.filter(d => !!client.docs?.[d.id]).length === DOCUMENT_LIST.length;
+          const infosFull = INFO_LIST.filter(i => !!String(client.infos?.[i.id] || "").trim()).length === INFO_LIST.length;
+          const commsFull = COMM_LIST.filter(c => !!client.comms?.[c.id]).length === COMM_LIST.length;
 
           return (
             <div>
@@ -950,14 +967,21 @@ export default function GNIApp() {
                       </div>
                     </div>
                     {/* Lien portail agence */}
-                    <div style={{ marginTop: 16, padding: "12px 14px", background: "#f5f5f7", borderRadius: 10, display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{ flex: 1, fontSize: 12, color: "#86868b", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <div style={{ marginTop: 16, padding: "12px 14px", background: "#f5f5f7", borderRadius: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <a href={`${PORTAIL_URL}?id=${client.id}`} target="_blank" rel="noopener noreferrer"
+                        style={{ flex: 1, fontSize: 12, color: "#0071e3", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textDecoration: "none", minWidth: 0 }}>
                         {PORTAIL_URL}?id={client.id}
+                      </a>
+                      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                        <a href={`${PORTAIL_URL}?id=${client.id}`} target="_blank" rel="noopener noreferrer"
+                          style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "#34C759", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                          <Eye size={12} /> Ouvrir
+                        </a>
+                        <button onClick={() => { navigator.clipboard.writeText(`${PORTAIL_URL}?id=${client.id}`); showNotif("Lien copié !"); }}
+                          style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "#0071e3", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                          Copier
+                        </button>
                       </div>
-                      <button onClick={() => { navigator.clipboard.writeText(`${PORTAIL_URL}?id=${client.id}`); showNotif("Lien copié !"); }}
-                        style={{ flexShrink: 0, padding: "6px 12px", borderRadius: 8, border: "none", background: "#0071e3", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                        Copier le lien
-                      </button>
                     </div>
                   </div>
 
@@ -983,8 +1007,8 @@ export default function GNIApp() {
 
                   {/* Checklist */}
                   <div style={{ background: "white", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)" }}>
-                    {activeTab === "docs"  && DOCUMENT_LIST.map((item) => <CheckItem key={item.id} item={item} checked={client.docs[item.id]}  onToggle={() => toggleItem(client.id, "docs",  item.id)} />)}
-                    {activeTab === "comms" && COMM_LIST.map((item)     => <CheckItem key={item.id} item={item} checked={client.comms[item.id]} onToggle={() => toggleItem(client.id, "comms", item.id)} />)}
+                    {activeTab === "docs"  && DOCUMENT_LIST.map((item) => <FileItem key={item.id} item={item} value={client.docs[item.id]} />)}
+                    {activeTab === "comms" && COMM_LIST.map((item)     => <FileItem key={item.id} item={item} value={client.comms[item.id]} />)}
                     {activeTab === "infos" && (
                       <div>
                         {INFO_LIST.map((item) => {
@@ -1474,6 +1498,89 @@ export default function GNIApp() {
         })()}
 
       </div>
+    </div>
+  );
+}
+
+// ── FileItem — affiche le fichier uploadé par l'agence (ou un état vide) ──────
+function FileItem({ item, value }) {
+  const IconComponent = item.Icon;
+  const isUrl  = typeof value === "string" && value.startsWith("http");
+  const isText = typeof value === "string" && !value.startsWith("http") && value.trim();
+
+  if (isUrl) {
+    const rawName = decodeURIComponent(value.split("/").pop().split("?")[0]);
+    const ext     = rawName.split(".").pop().toLowerCase();
+    const isImage = ["jpg","jpeg","png","gif","webp","svg"].includes(ext);
+    return (
+      <div style={{ padding: "14px 0", borderBottom: "1px solid #f5f5f7" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {isImage ? (
+            <img src={value} alt={rawName} style={{ width: 52, height: 52, objectFit: "cover", borderRadius: 10, flexShrink: 0, border: "1px solid #f2f2f7" }} />
+          ) : (
+            <div style={{ width: 52, height: 52, borderRadius: 10, background: "#e8f0fd", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <IconComponent size={22} color="#0071e3" />
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+              <CheckCircle size={13} color="#34C759" />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#34C759" }}>Reçu</span>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#1d1d1f", marginBottom: 2 }}>{item.label}</div>
+            <div style={{ fontSize: 11, color: "#86868b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rawName}</div>
+          </div>
+          <a href={value} target="_blank" rel="noopener noreferrer"
+            style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#0071e3", textDecoration: "none", fontWeight: 600, padding: "7px 14px", background: "#e8f0fd", borderRadius: 10 }}>
+            <Download size={13} /> Télécharger
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (isText) {
+    return (
+      <div style={{ padding: "14px 0", borderBottom: "1px solid #f5f5f7", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ width: 52, height: 52, borderRadius: 10, background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <IconComponent size={22} color="#34C759" />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 12, color: "#86868b", marginBottom: 3 }}>{item.label}</div>
+          <div style={{ fontSize: 14, fontWeight: 500, color: "#1d1d1f" }}>{value}</div>
+        </div>
+        <CheckCircle size={16} color="#34C759" />
+      </div>
+    );
+  }
+
+  // Validé manuellement (true sans URL)
+  if (value === true) {
+    return (
+      <div style={{ padding: "14px 0", borderBottom: "1px solid #f5f5f7", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ width: 52, height: 52, borderRadius: 10, background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <IconComponent size={22} color="#34C759" />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: "#1d1d1f" }}>{item.label}</div>
+          <div style={{ fontSize: 11, color: "#34C759", marginTop: 3 }}>Validé — pas de fichier joint</div>
+        </div>
+        <CheckCircle size={16} color="#34C759" />
+      </div>
+    );
+  }
+
+  // État vide — en attente de l'agence
+  return (
+    <div style={{ padding: "14px 0", borderBottom: "1px solid #f5f5f7", display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ width: 52, height: 52, borderRadius: 10, background: "#f5f5f7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "2px dashed #d1d1d6" }}>
+        <IconComponent size={22} color="#c7c7cc" />
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: "#86868b" }}>{item.label}</div>
+        <div style={{ fontSize: 11, color: "#aeaeb2", marginTop: 3 }}>En attente de l'agence</div>
+      </div>
+      <AlertCircle size={16} color="#FF9F0A" />
     </div>
   );
 }
