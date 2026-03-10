@@ -894,9 +894,27 @@ export default function GNIApp() {
 
           return (
             <div>
-              <button onClick={() => setSelectedClient(null)} style={{ fontSize: 14, color: "#0071e3", background: "none", border: "none", cursor: "pointer", fontWeight: 500, marginBottom: 20, padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
-                <ChevronRight size={14} style={{ transform: "rotate(180deg)" }} /> Retour aux dossiers
-              </button>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <button onClick={() => setSelectedClient(null)} style={{ fontSize: 14, color: "#0071e3", background: "none", border: "none", cursor: "pointer", fontWeight: 500, padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                  <ChevronRight size={14} style={{ transform: "rotate(180deg)" }} /> Retour aux dossiers
+                </button>
+                {currentUser.role === "admin" && (
+                  <button onClick={async () => {
+                    if (!window.confirm(`Supprimer le dossier "${client.name}" ? Cette action est irréversible.`)) return;
+                    try {
+                      await fetch(`${SUPABASE_URL}/rest/v1/clients?id=eq.${client.id}`, {
+                        method: "DELETE",
+                        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+                      });
+                    } catch(e) { console.error(e); }
+                    setClients(prev => prev.filter(c => c.id !== client.id));
+                    setSelectedClient(null);
+                    showNotif("Dossier supprimé !");
+                  }} style={{ fontSize: 13, color: "#FF3B30", background: "rgba(255,59,48,.08)", border: "none", cursor: "pointer", fontWeight: 600, padding: "7px 14px", borderRadius: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                    <X size={13} /> Supprimer le dossier
+                  </button>
+                )}
+              </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20 }}>
                 {/* Left column */}
