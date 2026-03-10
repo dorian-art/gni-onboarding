@@ -889,7 +889,7 @@ export default function GNIApp() {
           const client = clients.find((c) => c.id === selectedClient.id);
           const prog = getProgress(client);
           const docsFull  = Object.values(client.docs).filter(Boolean).length  === DOCUMENT_LIST.length;
-          const infosFull = Object.values(client.infos).filter(Boolean).length === INFO_LIST.length;
+          const infosFull = INFO_LIST.filter(item => String(client.infos?.[item.id] || "").trim()).length === INFO_LIST.length;
           const commsFull = Object.values(client.comms).filter(Boolean).length === COMM_LIST.length;
 
           return (
@@ -962,8 +962,38 @@ export default function GNIApp() {
                   {/* Checklist */}
                   <div style={{ background: "white", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)" }}>
                     {activeTab === "docs"  && DOCUMENT_LIST.map((item) => <CheckItem key={item.id} item={item} checked={client.docs[item.id]}  onToggle={() => toggleItem(client.id, "docs",  item.id)} />)}
-                    {activeTab === "infos" && INFO_LIST.map((item)     => <CheckItem key={item.id} item={item} checked={client.infos[item.id]} onToggle={() => toggleItem(client.id, "infos", item.id)} />)}
                     {activeTab === "comms" && COMM_LIST.map((item)     => <CheckItem key={item.id} item={item} checked={client.comms[item.id]} onToggle={() => toggleItem(client.id, "comms", item.id)} />)}
+                    {activeTab === "infos" && (
+                      <div>
+                        {INFO_LIST.map((item) => {
+                          const val = client.infos?.[item.id];
+                          const hasVal = val && String(val).trim();
+                          return (
+                            <div key={item.id} style={{ padding: "12px 0", borderBottom: "1px solid #f5f5f7" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: hasVal ? 6 : 0 }}>
+                                <item.Icon size={13} color={hasVal ? "#0071e3" : "#c7c7cc"} />
+                                <span style={{ fontSize: 12, fontWeight: 600, color: hasVal ? "#1d1d1f" : "#c7c7cc" }}>{item.label}</span>
+                                {hasVal && <CheckCircle size={12} color="#34C759" style={{ marginLeft: "auto" }} />}
+                              </div>
+                              {hasVal ? (
+                                <div style={{ fontSize: 13, color: "#3a3a3c", background: "#f5f5f7", borderRadius: 8, padding: "8px 12px", marginLeft: 21, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                  {String(val)}
+                                </div>
+                              ) : (
+                                <div style={{ fontSize: 12, color: "#c7c7cc", marginLeft: 21, fontStyle: "italic" }}>Non renseigné</div>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {/* SIRET séparé */}
+                        {client.infos?.siret && (
+                          <div style={{ marginTop: 12, padding: "10px 14px", background: "#f0f7ff", borderRadius: 10, border: "1px solid #0071e320" }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: "#0071e3", marginBottom: 2 }}>SIRET</div>
+                            <div style={{ fontSize: 14, fontFamily: "monospace", color: "#1d1d1f", fontWeight: 600 }}>{client.infos.siret}</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
