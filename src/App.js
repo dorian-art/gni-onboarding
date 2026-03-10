@@ -5,7 +5,7 @@ import {
   CreditCard, Landmark, ClipboardList, Hash, Home, LogOut, Plus, ChevronRight,
   Check, Circle, MessageSquare, Smartphone, Mic, Crown, User, CheckCircle,
   AlertCircle, Clock, Send, X, Sparkles, Loader, Minus, Pencil, Save,
-  Lock, RefreshCw, UserX, Eye, EyeOff
+  Lock, RefreshCw, UserX, Eye, EyeOff, Download
 } from "lucide-react";
 
 // ── Supabase ──────────────────────────────────────────────────────────────────
@@ -1481,13 +1481,20 @@ export default function GNIApp() {
 // ── CheckItem ─────────────────────────────────────────────────────────────────
 function CheckItem({ item, checked, onToggle }) {
   const IconComponent = item.Icon;
+  const fileUrl = typeof checked === "string" && checked.startsWith("http") ? checked : null;
   return (
-    <div onClick={onToggle} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: "1px solid #f5f5f7", cursor: "pointer" }}>
+    <div onClick={!fileUrl ? onToggle : undefined} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: "1px solid #f5f5f7", cursor: fileUrl ? "default" : "pointer" }}>
       <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: checked ? "linear-gradient(135deg,#0071e3,#00c7be)" : "transparent", border: checked ? "none" : "2px solid #d1d1d6", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .2s" }}>
         {checked && <Check size={12} color="white" strokeWidth={3} />}
       </div>
       {IconComponent && <IconComponent size={15} color={checked ? "#c7c7cc" : "#86868b"} />}
-      <span style={{ fontSize: 14, color: checked ? "#c7c7cc" : "#1d1d1f", textDecoration: checked ? "line-through" : "none", transition: "all .2s" }}>{item.label}</span>
+      <span style={{ fontSize: 14, color: checked ? "#c7c7cc" : "#1d1d1f", textDecoration: checked ? "line-through" : "none", transition: "all .2s", flex: 1 }}>{item.label}</span>
+      {fileUrl && (
+        <a href={fileUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+          style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#0071e3", textDecoration: "none", fontWeight: 500, padding: "4px 8px", background: "#e8f0fd", borderRadius: 6 }}>
+          <Download size={12} /> Voir
+        </a>
+      )}
     </div>
   );
 }
