@@ -30,6 +30,8 @@ const sb = {
 
 // ── Static data ──────────────────────────────────────────────────────────────
 
+const PORTAIL_URL = "https://gni-portail-5o8q2cfm0-dorian-arts-projects.vercel.app";
+
 const ADVISORS = ["Sandra", "Loïc", "Heliot", "Marie"];
 
 // Compte admin fixe
@@ -231,6 +233,29 @@ export default function GNIApp() {
       setDbLoading(false);
     };
     loadData();
+    // Rafraîchissement automatique toutes les 15 secondes
+    const interval = setInterval(async () => {
+      try {
+        const data = await sb.from("clients").select("*");
+        if (Array.isArray(data) && data.length > 0) {
+          const converted = data.map(r => ({
+            id:             r.id,
+            name:           r.name,
+            email:          r.email || "",
+            phone:          r.phone || "",
+            advisor:        r.advisor || "Sandra",
+            status:         r.status || "pending",
+            createdAt:      r.created_at ? new Date(r.created_at).toLocaleDateString("fr-FR") : "",
+            docs:           r.documents || {},
+            infos:          r.informations || {},
+            comms:          r.communication || {},
+            relanceHistory: r.relance_history || [],
+          }));
+          setClients(converted);
+        }
+      } catch(e) { console.error("Refresh error:", e); }
+    }, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   const saveClient = async (client) => {
@@ -901,6 +926,16 @@ export default function GNIApp() {
                       <div style={{ height: 8, background: "#f2f2f7", borderRadius: 4, overflow: "hidden" }}>
                         <div style={{ width: `${prog}%`, height: "100%", background: prog === 100 ? "#34C759" : "linear-gradient(90deg,#0071e3,#00c7be)", borderRadius: 4 }} />
                       </div>
+                    </div>
+                    {/* Lien portail agence */}
+                    <div style={{ marginTop: 16, padding: "12px 14px", background: "#f5f5f7", borderRadius: 10, display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ flex: 1, fontSize: 12, color: "#86868b", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {PORTAIL_URL}?id={client.id}
+                      </div>
+                      <button onClick={() => { navigator.clipboard.writeText(`${PORTAIL_URL}?id=${client.id}`); showNotif("Lien copié !"); }}
+                        style={{ flexShrink: 0, padding: "6px 12px", borderRadius: 8, border: "none", background: "#0071e3", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                        Copier le lien
+                      </button>
                     </div>
                   </div>
 
