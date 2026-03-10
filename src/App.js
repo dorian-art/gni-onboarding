@@ -30,7 +30,7 @@ const sb = {
 
 // ── Static data ──────────────────────────────────────────────────────────────
 
-const PORTAIL_URL = "https://gni-portail-5o8q2cfm0-dorian-arts-projects.vercel.app";
+const PORTAIL_URL = "https://gni-portail.vercel.app";
 
 const ADVISORS = ["Sandra", "Loïc", "Heliot", "Marie"];
 
