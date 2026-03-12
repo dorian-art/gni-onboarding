@@ -3,7 +3,7 @@ import {
   LayoutDashboard, FolderOpen, Bell, Users, Building2, MapPin, Settings,
   Monitor, Mail, Receipt, Phone, UserCircle, GraduationCap, Image, FileText,
   CreditCard, Landmark, ClipboardList, Hash, Home, LogOut, Plus, ChevronRight,
-  Check, Circle, MessageSquare, Smartphone, Mic, Crown, User, CheckCircle,
+  Check, Circle, MessageSquare, Mic, Crown, User, CheckCircle,
   AlertCircle, Clock, Send, X, Sparkles, Loader, Minus, Pencil, Save,
   Lock, RefreshCw, UserX, Eye, EyeOff, Download, ToggleLeft, ToggleRight, BellOff, Link
 } from "lucide-react";
@@ -240,10 +240,9 @@ export default function GNIApp() {
   const [activeTab,         setActiveTab]         = useState("docs");
   const [notification,      setNotification]      = useState(null);
   const [generatingId,      setGeneratingId]      = useState(null);
-  const [relancePopup,      setRelancePopup]      = useState(null);
   const [sortOrder,         setSortOrder]         = useState("asc");
   const [filterAdvisor,     setFilterAdvisor]     = useState("all");
-  const [filterStatus,      setFilterStatus]      = useState("all");
+  const filterStatus = "all";
   const [dashClientFilter,  setDashClientFilter]  = useState("all");
   const [dashProspectFilter, setDashProspectFilter] = useState("all");
   const [editingClient,     setEditingClient]     = useState(null);
@@ -438,15 +437,6 @@ export default function GNIApp() {
     return !member || member.prospectRelancesEnabled !== false;
   };
 
-  const toggleProspectDoc = (prospectId, docId) => {
-    setProspects((prev) => prev.map((p) => {
-      if (p.id !== prospectId) return p;
-      const updated = { ...p, docs: { ...p.docs, [docId]: !p.docs[docId] } };
-      const prog = getProspectProgress(updated);
-      updated.status = prog === 100 ? "complete" : prog === 0 ? "pending" : "in_progress";
-      return updated;
-    }));
-  };
 
   const addProspect = () => {
     if (!newProspectData.name.trim()) return;
@@ -522,19 +512,6 @@ export default function GNIApp() {
     setView("dashboard");
   };
 
-  const toggleItem = (clientId, category, itemId) => {
-    const client = clients.find(c => c.id === clientId);
-    if (!client) return;
-    const updated = {
-      ...client,
-      [category]: { ...client[category], [itemId]: !client[category][itemId] }
-    };
-    const prog = getProgress(updated);
-    updated.status = prog === 100 ? "complete" : prog === 0 ? "pending" : "in_progress";
-    setClients(prev => prev.map(c => c.id === clientId ? updated : c));
-    console.log("Saving client:", updated.name, category, itemId);
-    saveClient(updated);
-  };
 
   const addClient = async () => {
     if (!newClientName.trim()) return;
@@ -1604,7 +1581,6 @@ export default function GNIApp() {
             </div>
 
             {prospectTemplates.map((tpl, idx) => {
-              const isGenerating = generatingId === `prospect_${tpl.id}`;
               const CHANNELS = [
                 { key: "email", Icon: Mail,          label: "Email",           color: "#0071e3" },
                 { key: "sms",   Icon: MessageSquare, label: "SMS",             color: "#34C759" },
@@ -2566,25 +2542,7 @@ function FileItem({ item, value }) {
 }
 
 // ── CheckItem ─────────────────────────────────────────────────────────────────
-function CheckItem({ item, checked, onToggle }) {
-  const IconComponent = item.Icon;
-  const fileUrl = typeof checked === "string" && checked.startsWith("http") ? checked : null;
-  return (
-    <div onClick={!fileUrl ? onToggle : undefined} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: "1px solid #f5f5f7", cursor: fileUrl ? "default" : "pointer" }}>
-      <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: checked ? "linear-gradient(135deg,#0071e3,#00c7be)" : "transparent", border: checked ? "none" : "2px solid #d1d1d6", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .2s" }}>
-        {checked && <Check size={12} color="white" strokeWidth={3} />}
-      </div>
-      {IconComponent && <IconComponent size={15} color={checked ? "#c7c7cc" : "#86868b"} />}
-      <span style={{ fontSize: 14, color: checked ? "#c7c7cc" : "#1d1d1f", textDecoration: checked ? "line-through" : "none", transition: "all .2s", flex: 1 }}>{item.label}</span>
-      {fileUrl && (
-        <a href={fileUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-          style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#0071e3", textDecoration: "none", fontWeight: 500, padding: "4px 8px", background: "#e8f0fd", borderRadius: 6 }}>
-          <Download size={12} /> Voir
-        </a>
-      )}
-    </div>
-  );
-}
+
 
 // ── ChangePasswordCard ────────────────────────────────────────────────────────
 function ChangePasswordCard({ member, setTeam, showNotif }) {
