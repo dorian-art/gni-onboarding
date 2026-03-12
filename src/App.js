@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard, FolderOpen, Bell, Users, Building2, MapPin, Settings,
   Monitor, Mail, Receipt, Phone, UserCircle, GraduationCap, Image, FileText,
   CreditCard, Landmark, ClipboardList, Hash, Home, LogOut, Plus, ChevronRight,
   Check, Circle, MessageSquare, Smartphone, Mic, Crown, User, CheckCircle,
   AlertCircle, Clock, Send, X, Sparkles, Loader, Minus, Pencil, Save,
-  Lock, RefreshCw, UserX, Eye, EyeOff, Download
+  Lock, RefreshCw, UserX, Eye, EyeOff, Download, ToggleLeft, ToggleRight, BellOff, Link
 } from "lucide-react";
 
 // ── Supabase ──────────────────────────────────────────────────────────────────
@@ -34,14 +34,14 @@ const PORTAIL_URL = "https://gni-portail.vercel.app";
 
 const ADVISORS = ["Sandra", "Loïc", "Heliot", "Marie"];
 
-// Compte admin fixe
-const ADMIN_CREDENTIALS = { email: "dorian@gni-reseau.fr", password: "GNI2026!" };
+// Compte admin initial
+const INIT_ADMIN = { id: "admin", firstName: "Dorian", lastName: "Admin", email: "dorian@gni.com", password: "Gnimmo66", phone: "" };
 
 const INIT_TEAM = [
-  { id: "sandra",  firstName: "Sandra",  lastName: "Martin",   email: "sandra@gni-reseau.fr",  phone: "+33 6 10 11 12 13", password: "Sandra2026!",  disabled: false },
-  { id: "loic",    firstName: "Loïc",    lastName: "Bernard",  email: "loic@gni-reseau.fr",    phone: "+33 6 20 21 22 23", password: "Loic2026!",    disabled: false },
-  { id: "heliot",  firstName: "Heliot",  lastName: "Dupont",   email: "heliot@gni-reseau.fr",  phone: "+33 6 30 31 32 33", password: "Heliot2026!", disabled: false },
-  { id: "marie",   firstName: "Marie",   lastName: "Leclerc",  email: "marie@gni-reseau.fr",   phone: "+33 6 40 41 42 43", password: "Marie2026!",   disabled: false },
+  { id: "sandra",  firstName: "Sandra",  lastName: "Martin",   email: "sandra@gni-reseau.fr",  phone: "+33 6 10 11 12 13", password: "Sandra2026!",  disabled: false, relancesEnabled: true, prospectRelancesEnabled: true },
+  { id: "loic",    firstName: "Loïc",    lastName: "Bernard",  email: "loic@gni-reseau.fr",    phone: "+33 6 20 21 22 23", password: "Loic2026!",    disabled: false, relancesEnabled: true, prospectRelancesEnabled: true },
+  { id: "heliot",  firstName: "Heliot",  lastName: "Dupont",   email: "heliot@gni-reseau.fr",  phone: "+33 6 30 31 32 33", password: "Heliot2026!", disabled: false, relancesEnabled: true, prospectRelancesEnabled: true },
+  { id: "marie",   firstName: "Marie",   lastName: "Leclerc",  email: "marie@gni-reseau.fr",   phone: "+33 6 40 41 42 43", password: "Marie2026!",   disabled: false, relancesEnabled: true, prospectRelancesEnabled: true },
 ];
 
 const DOCUMENT_LIST = [
@@ -71,9 +71,66 @@ const COMM_LIST = [
   { id: "presentation", label: "Présentation de l'agence (réseaux sociaux)", Icon: FileText },
 ];
 
+// ── Prospection ──────────────────────────────────────────────────────────────
+
+const PROSPECT_DOC_LIST = [
+  { id: "contrat_portail",    label: "Contrat Portail diffusion",               Icon: FileText },
+  { id: "contrat_transaction",label: "Contrat logiciel de transaction",          Icon: FileText },
+  { id: "contrat_gestion",   label: "Contrat logiciel de gestion",              Icon: FileText },
+  { id: "contrats_divers",   label: "Différents contrats, outils et services",  Icon: ClipboardList },
+];
+
+const INIT_PROSPECT_TEMPLATES = [
+  { id: 1, delay: 3,  channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, suite à notre échange, je me permets de revenir vers vous. Nous serions ravis de vous accompagner dans votre projet avec le Groupe National de l'Immobilier. Avez-vous pu avancer sur les documents évoqués ?" },
+  { id: 2, delay: 7,  channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, je reviens vers vous concernant votre intégration au réseau GNI. N'hésitez pas à me contacter si vous avez des questions, je suis à votre disposition pour organiser un rendez-vous." },
+  { id: 3, delay: 14, channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, sans nouvelles de votre part, je souhaitais savoir si vous étiez toujours intéressé par le réseau GNI. Je reste disponible pour en discuter à votre convenance." },
+];
+
+const getProspectProgress = (prospect) => {
+  const docsDone = PROSPECT_DOC_LIST.filter(d => !!prospect.docs?.[d.id]).length;
+  return Math.round((docsDone / PROSPECT_DOC_LIST.length) * 100);
+};
+
+const getProspectMissing = (prospect) =>
+  PROSPECT_DOC_LIST.filter((d) => !prospect.docs?.[d.id]).map((d) => d.label);
+
+const MOCK_PROSPECTS = [
+  {
+    id: "prospect-1", name: "Agence Laforêt Toulouse", civility: "M.", contactFirstName: "Marc", contact: "Lefebvre", email: "marc@laforet-toulouse.fr", phone: "+33 5 61 22 33 44",
+    advisor: "Sandra", createdAt: "08/03/2026", status: "in_progress", notes: "Très intéressé, RDV prévu semaine prochaine. A déjà un contrat portail avec SeLoger.",
+    docs: { contrat_portail: true, contrat_transaction: false, contrat_gestion: false, contrats_divers: false },
+    relanceHistory: [
+      { id: 1, date: "2026-03-10T10:00:00", channel: "Email", by: "Sandra", missing: ["Contrat logiciel de transaction", "Contrat logiciel de gestion", "Différents contrats, outils et services"] },
+    ],
+  },
+  {
+    id: "prospect-2", name: "Century 21 Nantes", civility: "Mme", contactFirstName: "Sophie", contact: "Morel", email: "s.morel@century21-nantes.fr", phone: "+33 2 40 55 66 77",
+    advisor: "Loïc", createdAt: "05/03/2026", status: "pending", notes: "Premier contact par téléphone. Envoyer la plaquette commerciale.",
+    docs: { contrat_portail: false, contrat_transaction: false, contrat_gestion: false, contrats_divers: false },
+    relanceHistory: [],
+  },
+  {
+    id: "prospect-3", name: "Orpi Marseille Centre", civility: "M.", contactFirstName: "Philippe", contact: "Durand", email: "p.durand@orpi-marseille.fr", phone: "+33 4 91 33 44 55",
+    advisor: "Heliot", createdAt: "01/03/2026", status: "in_progress", notes: "A fourni ses contrats portail et transaction. En attente des contrats de gestion.",
+    docs: { contrat_portail: true, contrat_transaction: true, contrat_gestion: false, contrats_divers: false },
+    relanceHistory: [
+      { id: 1, date: "2026-03-07T14:30:00", channel: "SMS", by: "Heliot", missing: ["Contrat logiciel de gestion", "Différents contrats, outils et services"] },
+      { id: 2, date: "2026-03-03T09:15:00", channel: "Email", by: "Heliot", missing: ["Contrat logiciel de transaction", "Contrat logiciel de gestion", "Différents contrats, outils et services"] },
+    ],
+  },
+  {
+    id: "prospect-4", name: "Stéphane Plaza Immobilier Lyon", civility: "Mme", contactFirstName: "Claire", contact: "Martin", email: "c.martin@splaza-lyon.fr", phone: "+33 4 72 11 22 33",
+    advisor: "Marie", createdAt: "10/03/2026", status: "complete", notes: "Tous les contrats récupérés. Prêt pour signature d'adhésion.",
+    docs: { contrat_portail: true, contrat_transaction: true, contrat_gestion: true, contrats_divers: true },
+    relanceHistory: [
+      { id: 1, date: "2026-03-11T16:00:00", channel: "Assistant vocal", by: "Marie", missing: [] },
+    ],
+  },
+];
+
 const MOCK_CLIENTS = [
   {
-    id: 1, name: "Agence Prestige Avignon", advisor: "Sandra", createdAt: "2026-02-15", status: "in_progress",
+    id: 1, name: "Agence Prestige Avignon", civility: "Mme", contactFirstName: "Sophie", contact: "Martin", advisor: "Sandra", createdAt: "2026-02-15", status: "in_progress",
     docs:  { carte_pro: true,  rib: true,  cni: false, kbis: false, siret: true },
     infos: { enseigne: true, points_vente: true, services: false, logiciel: false, email_direction: true, facturation: false, email_agence: false, email_collaborateurs: false, assistante: false, formation: false },
     comms: { logo: true, photos: false, presentation: false },
@@ -84,18 +141,18 @@ const MOCK_CLIENTS = [
     ],
   },
   {
-    id: 2, name: "Century 21 Marseille Nord", advisor: "Loïc", createdAt: "2026-03-01", status: "complete",
+    id: 2, name: "Century 21 Marseille Nord", civility: "M.", contactFirstName: "Pierre", contact: "Durand", advisor: "Loïc", createdAt: "2026-03-01", status: "complete",
     docs:  { carte_pro: true, rib: true, cni: true, kbis: true, siret: true },
     infos: { enseigne: true, points_vente: true, services: true, logiciel: true, email_direction: true, facturation: true, email_agence: true, email_collaborateurs: true, assistante: true, formation: true },
     comms: { logo: true, photos: true, presentation: true },
     email: "direction@c21-marseille.fr", phone: "+33 4 91 22 33 44",
     relanceHistory: [
       { id: 1, date: "2026-03-02T10:05:00", channel: "Email",    by: "Loïc", missing: ["Extrait K-bis", "Photos", "Présentation"] },
-      { id: 2, date: "2026-03-05T08:47:00", channel: "WhatsApp", by: "Loïc", missing: ["Photos", "Présentation"] },
+      { id: 2, date: "2026-03-05T08:47:00", channel: "Assistant vocal", by: "Loïc", missing: ["Photos", "Présentation"] },
     ],
   },
   {
-    id: 3, name: "IAD France - Lyon Part-Dieu", advisor: "Marie", createdAt: "2026-03-06", status: "pending",
+    id: 3, name: "IAD France - Lyon Part-Dieu", civility: "Mme", contactFirstName: "Julie", contact: "Blanc", advisor: "Marie", createdAt: "2026-03-06", status: "pending",
     docs:  { carte_pro: false, rib: false, cni: false, kbis: false, siret: false },
     infos: { enseigne: true, points_vente: false, services: false, logiciel: false, email_direction: true, facturation: false, email_agence: false, email_collaborateurs: false, assistante: false, formation: false },
     comms: { logo: false, photos: false, presentation: false },
@@ -103,7 +160,7 @@ const MOCK_CLIENTS = [
     relanceHistory: [],
   },
   {
-    id: 4, name: "Foncia Premium Bordeaux", advisor: "Heliot", createdAt: "2026-02-28", status: "in_progress",
+    id: 4, name: "Foncia Premium Bordeaux", civility: "M.", contactFirstName: "Thomas", contact: "Roux", advisor: "Heliot", createdAt: "2026-02-28", status: "in_progress",
     docs:  { carte_pro: true, rib: false, cni: true, kbis: false, siret: false },
     infos: { enseigne: true, points_vente: true, services: true, logiciel: false, email_direction: true, facturation: true, email_agence: false, email_collaborateurs: false, assistante: false, formation: false },
     comms: { logo: true, photos: false, presentation: false },
@@ -115,9 +172,9 @@ const MOCK_CLIENTS = [
 ];
 
 const INIT_TEMPLATES = [
-  { id: 1, delay: 3,  channels: { email: true, sms: true, whatsapp: true }, message: "Bonjour {nom}, nous attendons encore vos documents pour finaliser votre dossier d'adhésion au réseau GNI. Merci de nous les transmettre dès que possible." },
-  { id: 2, delay: 7,  channels: { email: true, sms: true, whatsapp: true }, message: "Bonjour {nom}, votre dossier d'adhésion au Groupe National de l'Immobilier est toujours incomplet. Nous restons disponibles pour vous accompagner." },
-  { id: 3, delay: 14, channels: { email: true, sms: true, whatsapp: true }, message: "Bonjour {nom}, sans réponse de votre part sous 48h, nous ne pourrons pas finaliser votre intégration au réseau GNI. N'hésitez pas à nous contacter." },
+  { id: 1, delay: 3,  channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, nous attendons encore vos documents pour finaliser votre dossier d'adhésion au réseau GNI. Merci de nous les transmettre dès que possible." },
+  { id: 2, delay: 7,  channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, votre dossier d'adhésion au Groupe National de l'Immobilier est toujours incomplet. Nous restons disponibles pour vous accompagner." },
+  { id: 3, delay: 14, channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, sans réponse de votre part sous 48h, nous ne pourrons pas finaliser votre intégration au réseau GNI. N'hésitez pas à nous contacter." },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -149,9 +206,7 @@ const formatDateTime = (iso) => {
 const CHANNEL_META = {
   "Email":           { Icon: Mail,           color: "#0071e3" },
   "SMS":             { Icon: MessageSquare,  color: "#34C759" },
-  "WhatsApp":        { Icon: Smartphone,     color: "#25D366" },
-  "Vocal IA":        { Icon: Mic,            color: "#FF9F0A" },
-  "Assistant vocal": { Icon: Mic,            color: "#FF9F0A" },
+  "Assistant vocal": { Icon: Mic,             color: "#FF9F0A" },
 };
 
 const StatusIcon = ({ status, size = 14 }) =>
@@ -177,6 +232,9 @@ export default function GNIApp() {
   const [newClientName,     setNewClientName]     = useState("");
   const [newClientEmail,    setNewClientEmail]    = useState("");
   const [newClientPhone,    setNewClientPhone]    = useState("");
+  const [newClientCivility, setNewClientCivility] = useState("");
+  const [newClientContactFirstName, setNewClientContactFirstName] = useState("");
+  const [newClientContact,  setNewClientContact]  = useState("");
   const [newClientAdvisor,  setNewClientAdvisor]  = useState("Sandra");
   const [relanceTemplates,  setRelanceTemplates]  = useState(INIT_TEMPLATES);
   const [activeTab,         setActiveTab]         = useState("docs");
@@ -186,8 +244,28 @@ export default function GNIApp() {
   const [sortOrder,         setSortOrder]         = useState("asc");
   const [filterAdvisor,     setFilterAdvisor]     = useState("all");
   const [filterStatus,      setFilterStatus]      = useState("all");
-  const [team,              setTeam]              = useState(INIT_TEAM);
+  const [dashClientFilter,  setDashClientFilter]  = useState("all");
+  const [dashProspectFilter, setDashProspectFilter] = useState("all");
+  const [editingClient,     setEditingClient]     = useState(null);
+  const skipRefreshRef = useRef(false);
+  const [editingProspectInfo, setEditingProspectInfo] = useState(null);
+  const [team,              setTeam]              = useState(() => { try { const s = localStorage.getItem("gni_team"); return s ? JSON.parse(s) : INIT_TEAM; } catch { return INIT_TEAM; } });
   const [editingMember,     setEditingMember]     = useState(null);
+  const [relancesEnabled,   setRelancesEnabled]   = useState(() => { try { const s = localStorage.getItem("gni_relances_enabled"); return s !== null ? JSON.parse(s) : true; } catch { return true; } });
+  const [adminProfile,      setAdminProfile]      = useState(() => { try { const s = localStorage.getItem("gni_admin"); return s ? JSON.parse(s) : INIT_ADMIN; } catch { return INIT_ADMIN; } });
+  const [prospects,         setProspects]         = useState(() => { try { const s = localStorage.getItem("gni_prospects"); return s ? JSON.parse(s) : MOCK_PROSPECTS; } catch { return MOCK_PROSPECTS; } });
+  const [selectedProspect,  setSelectedProspect]  = useState(null);
+  const [showNewProspect,   setShowNewProspect]   = useState(false);
+  const [prospectTemplates, setProspectTemplates] = useState(() => { try { const s = localStorage.getItem("gni_prospect_templates"); return s ? JSON.parse(s) : INIT_PROSPECT_TEMPLATES; } catch { return INIT_PROSPECT_TEMPLATES; } });
+  const [prospectRelancesEnabled, setProspectRelancesEnabled] = useState(() => { try { const s = localStorage.getItem("gni_prospect_relances_enabled"); return s !== null ? JSON.parse(s) : true; } catch { return true; } });
+
+  // ── Persistance localStorage ──────────────────────────────────────────────
+  useEffect(() => { localStorage.setItem("gni_team", JSON.stringify(team)); }, [team]);
+  useEffect(() => { localStorage.setItem("gni_admin", JSON.stringify(adminProfile)); }, [adminProfile]);
+  useEffect(() => { localStorage.setItem("gni_relances_enabled", JSON.stringify(relancesEnabled)); }, [relancesEnabled]);
+  useEffect(() => { localStorage.setItem("gni_prospects", JSON.stringify(prospects)); }, [prospects]);
+  useEffect(() => { localStorage.setItem("gni_prospect_templates", JSON.stringify(prospectTemplates)); }, [prospectTemplates]);
+  useEffect(() => { localStorage.setItem("gni_prospect_relances_enabled", JSON.stringify(prospectRelancesEnabled)); }, [prospectRelancesEnabled]);
 
   // ── Chargement Supabase ────────────────────────────────────────────────────
   useEffect(() => {
@@ -201,6 +279,9 @@ export default function GNIApp() {
           const converted = data.map(r => ({
             id:             r.id,
             name:           r.name,
+            civility:       r.civility || "",
+            contactFirstName: r.contact_first_name || "",
+            contact:        r.contact || "",
             email:          r.email || "",
             phone:          r.phone || "",
             advisor:        r.advisor || "Sandra",
@@ -217,6 +298,9 @@ export default function GNIApp() {
           const mockData = MOCK_CLIENTS.map(c => ({
             id:              String(c.id),
             name:            c.name,
+            civility:        c.civility || "",
+            contact_first_name: c.contactFirstName || "",
+            contact:         c.contact || "",
             email:           c.email || "",
             phone:           c.phone || "",
             advisor:         c.advisor,
@@ -231,6 +315,9 @@ export default function GNIApp() {
           setClients(mockData.map(c => ({
             id:             c.id,
             name:           c.name,
+            civility:       c.civility || "",
+            contactFirstName: c.contact_first_name || c.contactFirstName || "",
+            contact:        c.contact || "",
             email:          c.email || "",
             phone:          c.phone || "",
             advisor:        c.advisor,
@@ -251,12 +338,16 @@ export default function GNIApp() {
     loadData();
     // Rafraîchissement automatique toutes les 15 secondes
     const interval = setInterval(async () => {
+      if (skipRefreshRef.current) return;
       try {
         const data = await sb.from("clients").select("*");
         if (Array.isArray(data) && data.length > 0) {
           const converted = data.map(r => ({
             id:             r.id,
             name:           r.name,
+            civility:       r.civility || "",
+            contactFirstName: r.contact_first_name || "",
+            contact:        r.contact || "",
             email:          r.email || "",
             phone:          r.phone || "",
             advisor:        r.advisor || "Sandra",
@@ -275,8 +366,9 @@ export default function GNIApp() {
   }, []);
 
   const saveClient = async (client) => {
+    skipRefreshRef.current = true;
     try {
-      const payload = {
+      const base = {
         id:              client.id,
         name:            client.name,
         email:           client.email || "",
@@ -288,15 +380,20 @@ export default function GNIApp() {
         communication:   client.comms || {},
         relance_history: client.relanceHistory || [],
       };
-      console.log("Saving client:", payload);
-      const res = await sb.from("clients").upsert(payload);
+      // Try with new columns first
+      const full = { ...base, civility: client.civility || "", contact_first_name: client.contactFirstName || "", contact: client.contact || "" };
+      console.log("Saving client:", full);
+      const res = await sb.from("clients").upsert(full);
       if (res && res.status && res.status >= 400) {
-        showNotif("Erreur lors de la sauvegarde. Vérifiez votre connexion.");
+        // Retry without new columns if they don't exist yet
+        console.warn("Retrying save without new columns...");
+        await sb.from("clients").upsert(base);
       }
     } catch (e) {
       console.error("Save error:", e);
-      showNotif("Erreur lors de la sauvegarde. Vérifiez votre connexion.");
+      try { await sb.from("clients").upsert({ id: client.id, name: client.name, email: client.email || "", phone: client.phone || "", advisor: client.advisor, status: client.status, documents: client.docs || {}, informations: client.infos || {}, communication: client.comms || {}, relance_history: client.relanceHistory || [] }); } catch(e2) { console.error("Fallback save error:", e2); }
     }
+    setTimeout(() => { skipRefreshRef.current = false; }, 20000);
   };
 
   const addClientToDb = async (client) => {
@@ -304,6 +401,9 @@ export default function GNIApp() {
       await sb.from("clients").insert({
         id:             client.id,
         name:           client.name,
+        civility:       client.civility || "",
+        contact_first_name: client.contactFirstName || "",
+        contact:        client.contact || "",
         email:          client.email,
         phone:          client.phone,
         advisor:        client.advisor,
@@ -321,6 +421,64 @@ export default function GNIApp() {
   const showNotif = (msg) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 3000);
+  };
+
+  // ── Prospects ──
+  const logProspectRelance = (prospectId, channel) => {
+    const prospect = prospects.find((p) => p.id === prospectId);
+    if (!prospect) return;
+    const entry = { id: Date.now(), date: new Date().toISOString(), channel, by: currentUser.name, missing: getProspectMissing(prospect) };
+    setProspects((prev) => prev.map((p) => p.id === prospectId ? { ...p, relanceHistory: [entry, ...(p.relanceHistory || [])] } : p));
+    showNotif(`Relance ${channel} envoyée à ${prospect.name} !`);
+  };
+
+  const isProspectRelanceAllowed = (prospect) => {
+    if (!prospectRelancesEnabled) return false;
+    const member = team.find((m) => m.firstName === prospect.advisor);
+    return !member || member.prospectRelancesEnabled !== false;
+  };
+
+  const toggleProspectDoc = (prospectId, docId) => {
+    setProspects((prev) => prev.map((p) => {
+      if (p.id !== prospectId) return p;
+      const updated = { ...p, docs: { ...p.docs, [docId]: !p.docs[docId] } };
+      const prog = getProspectProgress(updated);
+      updated.status = prog === 100 ? "complete" : prog === 0 ? "pending" : "in_progress";
+      return updated;
+    }));
+  };
+
+  const addProspect = () => {
+    if (!newProspectData.name.trim()) return;
+    const prospect = {
+      id: crypto.randomUUID(),
+      name: newProspectData.name,
+      civility: newProspectData.civility,
+      contactFirstName: newProspectData.contactFirstName,
+      contact: newProspectData.contact,
+      email: newProspectData.email,
+      phone: newProspectData.phone,
+      notes: newProspectData.notes,
+      advisor: currentUser.role === "admin" ? newProspectData.advisor : currentUser.name,
+      createdAt: new Date().toLocaleDateString("fr-FR"),
+      status: "pending",
+      docs: Object.fromEntries(PROSPECT_DOC_LIST.map((d) => [d.id, false])),
+      relanceHistory: [],
+    };
+    setProspects((prev) => [...prev, prospect]);
+    setShowNewProspect(false);
+    setNewProspectData({ name: "", civility: "", contactFirstName: "", contact: "", email: "", phone: "", notes: "", advisor: "Sandra" });
+    showNotif("Prospect ajouté !");
+  };
+
+  const [newProspectData, setNewProspectData] = useState({ name: "", civility: "", contactFirstName: "", contact: "", email: "", phone: "", notes: "", advisor: "Sandra" });
+  const [filterProspectAdvisor, setFilterProspectAdvisor] = useState("all");
+  const [filterProspectStatus, setFilterProspectStatus] = useState("all");
+
+  const isRelanceAllowed = (client) => {
+    if (!relancesEnabled) return false;
+    const member = team.find((m) => m.firstName === client.advisor);
+    return !member || member.relancesEnabled !== false;
   };
 
   const logRelance = (clientId, channel) => {
@@ -343,10 +501,10 @@ export default function GNIApp() {
     setLoginError("");
     const email = loginEmail.trim().toLowerCase();
     // Admin check
-    if (email === ADMIN_CREDENTIALS.email.toLowerCase()) {
-      if (loginPassword === ADMIN_CREDENTIALS.password) {
-        setCurrentUser({ role: "admin", name: "Dorian" });
-        localStorage.setItem("gni_session", JSON.stringify({ role: "admin", name: "Dorian" }));
+    if (email === adminProfile.email.toLowerCase()) {
+      if (loginPassword === adminProfile.password) {
+        setCurrentUser({ role: "admin", name: adminProfile.firstName });
+        localStorage.setItem("gni_session", JSON.stringify({ role: "admin", name: adminProfile.firstName }));
         setView("dashboard");
       } else {
         setLoginError("Mot de passe incorrect.");
@@ -389,6 +547,9 @@ export default function GNIApp() {
       docs:  Object.fromEntries(DOCUMENT_LIST.map((d) => [d.id, false])),
       infos: Object.fromEntries(INFO_LIST.map((i) => [i.id, false])),
       comms: Object.fromEntries(COMM_LIST.map((c) => [c.id, false])),
+      civility: newClientCivility,
+      contactFirstName: newClientContactFirstName,
+      contact: newClientContact,
       email: newClientEmail,
       phone: newClientPhone,
       relanceHistory: [],
@@ -396,7 +557,7 @@ export default function GNIApp() {
     setClients((prev) => [...prev, newClient]);
     await addClientToDb(newClient);
     setShowNewClient(false);
-    setNewClientName(""); setNewClientEmail(""); setNewClientPhone("");
+    setNewClientName(""); setNewClientCivility(""); setNewClientContactFirstName(""); setNewClientContact(""); setNewClientEmail(""); setNewClientPhone("");
     showNotif("Client ajouté avec succès !");
   };
 
@@ -409,7 +570,7 @@ export default function GNIApp() {
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
-          messages: [{ role: "user", content: `Génère un message de relance professionnel et chaleureux pour un réseau immobilier appelé "Groupe National de l'Immobilier" (GNI). Ce message est la relance J+${delay} envoyée à une agence immobilière qui n'a pas encore transmis tous ses documents d'adhésion. Commence par "Bonjour {nom}," (utiliser exactement {nom}). Sois bref (2-3 phrases), professionnel et chaleureux. Mentionne le délai de ${delay} jours. Propose de l'aide. Pas de signature. Réponds UNIQUEMENT avec le texte du message.` }],
+          messages: [{ role: "user", content: `Génère un message de relance professionnel et chaleureux pour un réseau immobilier appelé "Groupe National de l'Immobilier" (GNI). Ce message est la relance J+${delay} envoyée à une agence immobilière qui n'a pas encore transmis tous ses documents d'adhésion. Commence par "Bonjour {civilite} {nom}," (utiliser exactement {civilite} {nom}). Sois bref (2-3 phrases), professionnel et chaleureux. Mentionne le délai de ${delay} jours. Propose de l'aide. Pas de signature. Réponds UNIQUEMENT avec le texte du message.` }],
         }),
       });
       const data = await res.json();
@@ -443,9 +604,20 @@ export default function GNIApp() {
     pending:    allClients.filter((c) => c.status === "pending").length,
   };
 
+  const allProspects = currentUser?.role === "admin"
+    ? prospects
+    : prospects.filter((p) => p.advisor === currentUser?.name);
+  const prospectStats = {
+    total:      allProspects.length,
+    complete:   allProspects.filter((p) => p.status === "complete").length,
+    inProgress: allProspects.filter((p) => p.status === "in_progress").length,
+    pending:    allProspects.filter((p) => p.status === "pending").length,
+  };
+
   const navItems = [
-    { id: "dashboard", Icon: LayoutDashboard, label: "Tableau de bord" },
-    { id: "clients",   Icon: FolderOpen,      label: "Dossiers clients" },
+    { id: "dashboard",   Icon: LayoutDashboard, label: "Tableau de bord" },
+    { id: "clients",     Icon: FolderOpen,      label: "Dossiers clients" },
+    { id: "prospects",   Icon: Building2,       label: "Prospection" },
     ...(currentUser?.role === "admin" ? [
       { id: "relances", Icon: Bell,  label: "Relances" },
       { id: "team",     Icon: Users, label: "Équipe" },
@@ -536,9 +708,26 @@ export default function GNIApp() {
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f7", fontFamily: "'SF Pro Display',-apple-system,BlinkMacSystemFont,sans-serif", display: "flex" }}>
 
+      {/* Impersonation banner */}
+      {currentUser.impersonatedBy && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 10000, background: "linear-gradient(90deg,#FF9F0A,#FF6723)", color: "white", padding: "8px 20px", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 12, boxShadow: "0 2px 10px rgba(0,0,0,.15)" }}>
+          <Eye size={14} />
+          <span>Vous visualisez le compte de <strong>{currentUser.name}</strong></span>
+          <button onClick={() => {
+            const session = { role: "admin", name: adminProfile.firstName };
+            setCurrentUser(session);
+            localStorage.setItem("gni_session", JSON.stringify(session));
+            setView("team");
+            showNotif("Retour au compte administrateur");
+          }} style={{ padding: "4px 14px", borderRadius: 8, border: "1.5px solid rgba(255,255,255,.5)", background: "rgba(255,255,255,.2)", color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+            <Crown size={11} /> Revenir admin
+          </button>
+        </div>
+      )}
+
       {/* Notification toast */}
       {notification && (
-        <div style={{ position: "fixed", top: 20, right: 20, zIndex: 9999, background: "#34C759", color: "white", padding: "12px 20px", borderRadius: 12, fontSize: 14, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,.15)", display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ position: "fixed", top: currentUser.impersonatedBy ? 52 : 20, right: 20, zIndex: 9999, background: "#34C759", color: "white", padding: "12px 20px", borderRadius: 12, fontSize: 14, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,.15)", display: "flex", alignItems: "center", gap: 8 }}>
           <Check size={15} /> {notification}
         </div>
       )}
@@ -550,7 +739,7 @@ export default function GNIApp() {
         </div>
         <nav style={{ flex: 1 }}>
           {navItems.map(({ id, Icon, label }) => (
-            <button key={id} onClick={() => { setView(id); setSelectedClient(null); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, border: "none", background: view === id ? "rgba(0,113,227,.1)" : "transparent", color: view === id ? "#0071e3" : "#3a3a3c", fontSize: 13, fontWeight: view === id ? 600 : 500, cursor: "pointer", marginBottom: 4, textAlign: "left", transition: "all .2s" }}>
+            <button key={id} onClick={() => { setView(id); setSelectedClient(null); setSelectedProspect(null); setShowNewProspect(false); setShowNewClient(false); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, border: "none", background: view === id ? "rgba(0,113,227,.1)" : "transparent", color: view === id ? "#0071e3" : "#3a3a3c", fontSize: 13, fontWeight: view === id ? 600 : 500, cursor: "pointer", marginBottom: 4, textAlign: "left", transition: "all .2s" }}>
               <Icon size={16} /> {label}
             </button>
           ))}
@@ -573,109 +762,156 @@ export default function GNIApp() {
         {/* ── DASHBOARD ── */}
         {view === "dashboard" && (
           <div>
-            <div style={{ marginBottom: 28 }}>
-              <h1 style={{ fontSize: 26, fontWeight: 700, color: "#1d1d1f", margin: 0, letterSpacing: -.5 }}>Bonjour {currentUser.name}</h1>
-              <p style={{ fontSize: 14, color: "#86868b", margin: "4px 0 0" }}>État de vos dossiers en cours</p>
-            </div>
-
-            {/* Stat cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 32 }}>
-              {[
-                { label: "Total dossiers", value: stats.total,      color: "#0071e3", Icon: FolderOpen,  filter: "all"         },
-                { label: "Complets",        value: stats.complete,   color: "#34C759", Icon: CheckCircle, filter: "complete"    },
-                { label: "En cours",        value: stats.inProgress, color: "#FF9F0A", Icon: Clock,       filter: "in_progress" },
-                { label: "En attente",      value: stats.pending,    color: "#FF3B30", Icon: AlertCircle, filter: "pending"     },
-              ].map((s) => {
-                const active = filterStatus === s.filter;
-                return (
-                  <div key={s.label}
-                    onClick={() => setFilterStatus(active ? "all" : s.filter)}
-                    style={{ background: active ? s.color : "white", borderRadius: 16, padding: 20, boxShadow: active ? `0 4px 18px ${s.color}40` : "0 2px 12px rgba(0,0,0,.06)", cursor: "pointer", border: `2px solid ${active ? s.color : "transparent"}`, transition: "all .2s" }}
-                    onMouseEnter={(e) => { if (!active) e.currentTarget.style.borderColor = s.color + "60"; }}
-                    onMouseLeave={(e) => { if (!active) e.currentTarget.style.borderColor = "transparent"; }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div style={{ fontSize: 28, fontWeight: 700, color: active ? "white" : s.color }}>{s.value}</div>
-                      <div style={{ width: 32, height: 32, borderRadius: 8, background: active ? "rgba(255,255,255,.2)" : s.color + "14", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <s.Icon size={16} color={active ? "white" : s.color} />
-                      </div>
-                    </div>
-                    <div style={{ fontSize: 12, color: active ? "rgba(255,255,255,.85)" : "#86868b", marginTop: 6, fontWeight: active ? 600 : 400 }}>{s.label}</div>
-                    {active && s.filter !== "all" && (
-                      <div style={{ fontSize: 10, color: "rgba(255,255,255,.7)", marginTop: 4 }}>Cliquez pour réinitialiser</div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Clients list */}
-            <div style={{ background: "white", borderRadius: 16, padding: 24, boxShadow: "0 2px 12px rgba(0,0,0,.06)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1d1d1f", margin: 0 }}>
-                  {filterStatus === "all"         ? "Tous les dossiers" :
-                   filterStatus === "complete"    ? "Dossiers complets" :
-                   filterStatus === "in_progress" ? "Dossiers en cours" :
-                                                    "Dossiers en attente"}
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "#86868b", marginLeft: 8 }}>({visibleClients.length})</span>
-                </h2>
-                <button onClick={() => setView("clients")} style={{ fontSize: 13, color: "#0071e3", background: "none", border: "none", cursor: "pointer", fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
-                  Gérer <ChevronRight size={14} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+              <div>
+                <h1 style={{ fontSize: 26, fontWeight: 700, color: "#1d1d1f", margin: 0, letterSpacing: -.5 }}>Bonjour {currentUser.name}</h1>
+                <p style={{ fontSize: 14, color: "#86868b", margin: "4px 0 0" }}>État de vos dossiers en cours</p>
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => { setView("clients"); setShowNewClient(true); }} style={{ padding: "10px 20px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#0071e3,#00c7be)", color: "white", fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: "0 4px 14px rgba(0,113,227,.3)", display: "flex", alignItems: "center", gap: 6 }}>
+                  <Plus size={16} /> Nouveau client
+                </button>
+                <button onClick={() => { setView("prospects"); setShowNewProspect(true); }} style={{ padding: "10px 20px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#FF9F0A,#FF6723)", color: "white", fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: "0 4px 14px rgba(255,159,10,.3)", display: "flex", alignItems: "center", gap: 6 }}>
+                  <Plus size={16} /> Nouveau prospect
                 </button>
               </div>
+            </div>
 
-              {visibleClients.map((client) => {
-                const prog = getProgress(client);
-                const isOpen = relancePopup === client.id;
-                return (
-                  <div key={client.id}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 0", borderBottom: isOpen ? "none" : "1px solid #f2f2f7" }}>
-                      <div onClick={() => { setSelectedClient(client); setView("clients"); }} style={{ width: 40, height: 40, borderRadius: 12, background: "#f2f2f7", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-                        <Building2 size={18} color="#86868b" />
+            {/* ── CLIENTS Section ── */}
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <div style={{ width: 6, height: 24, borderRadius: 3, background: "linear-gradient(135deg,#0071e3,#00c7be)" }} />
+                <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1d1d1f", margin: 0 }}>Clients</h2>
+                <span style={{ fontSize: 13, color: "#86868b", fontWeight: 500 }}>({stats.total} dossiers)</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 16 }}>
+                {[
+                  { label: "Total",      value: stats.total,      color: "#0071e3", Icon: FolderOpen,  filter: "all"         },
+                  { label: "Complets",    value: stats.complete,   color: "#34C759", Icon: CheckCircle, filter: "complete"    },
+                  { label: "En cours",    value: stats.inProgress, color: "#FF9F0A", Icon: Clock,       filter: "in_progress" },
+                  { label: "En attente",  value: stats.pending,    color: "#FF3B30", Icon: AlertCircle, filter: "pending"     },
+                ].map((s) => {
+                  const active = dashClientFilter === s.filter;
+                  return (
+                    <div key={s.label}
+                      onClick={() => setDashClientFilter(active ? "all" : s.filter)}
+                      style={{ background: active ? s.color : "white", borderRadius: 14, padding: "16px 18px", boxShadow: active ? `0 4px 18px ${s.color}40` : "0 2px 10px rgba(0,0,0,.05)", borderLeft: `4px solid ${s.color}`, cursor: "pointer", transition: "all .2s" }}
+                      onMouseEnter={(e) => { if (!active) e.currentTarget.style.transform = "translateY(-2px)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: active ? "white" : s.color }}>{s.value}</div>
+                        <s.Icon size={16} color={active ? "white" : s.color} />
                       </div>
-                      <div style={{ flex: 1, cursor: "pointer" }} onClick={() => { setSelectedClient(client); setView("clients"); }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: "#1d1d1f" }}>{client.name}</div>
-                        <div style={{ fontSize: 12, color: "#86868b" }}>{client.advisor} · {client.createdAt}</div>
+                      <div style={{ fontSize: 11, color: active ? "rgba(255,255,255,.85)" : "#86868b", marginTop: 4 }}>{s.label}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ background: "white", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 600, color: "#1d1d1f", margin: 0 }}>
+                    {dashClientFilter === "all" ? "Tous les clients" : dashClientFilter === "complete" ? "Clients complets" : dashClientFilter === "in_progress" ? "Clients en cours" : "Clients en attente"}
+                    <span style={{ fontSize: 12, fontWeight: 500, color: "#86868b", marginLeft: 6 }}>({allClients.filter(c => dashClientFilter === "all" || c.status === dashClientFilter).length})</span>
+                  </h3>
+                  <button onClick={() => setView("clients")} style={{ fontSize: 13, color: "#0071e3", background: "none", border: "none", cursor: "pointer", fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
+                    Voir tout <ChevronRight size={14} />
+                  </button>
+                </div>
+                {allClients.filter(c => dashClientFilter === "all" || c.status === dashClientFilter).slice(0, 5).map((client) => {
+                  const prog = getProgress(client);
+                  return (
+                    <div key={client.id} onClick={() => { setSelectedClient(client); setView("clients"); }}
+                      style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: "1px solid #f2f2f7", cursor: "pointer" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: "#e8f4fd", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Building2 size={16} color="#0071e3" />
                       </div>
-                      <div style={{ width: 72 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#1d1d1f" }}>{client.name}</div>
+                        <div style={{ fontSize: 11, color: "#86868b" }}>{client.advisor} · {client.createdAt}</div>
+                      </div>
+                      <div style={{ width: 60 }}>
                         <div style={{ height: 4, background: "#f2f2f7", borderRadius: 2, overflow: "hidden" }}>
                           <div style={{ width: `${prog}%`, height: "100%", background: prog === 100 ? "#34C759" : "#0071e3", borderRadius: 2 }} />
                         </div>
-                        <div style={{ fontSize: 11, color: "#86868b", marginTop: 3, textAlign: "right" }}>{prog}%</div>
+                        <div style={{ fontSize: 10, color: "#86868b", marginTop: 2, textAlign: "right" }}>{prog}%</div>
                       </div>
-                      <div style={{ padding: "4px 10px", borderRadius: 20, background: getStatusColor(client.status) + "18", color: getStatusColor(client.status), fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
-                        <StatusIcon status={client.status} size={11} /> {getStatusLabel(client.status)}
+                      <div style={{ padding: "3px 8px", borderRadius: 20, background: getStatusColor(client.status) + "18", color: getStatusColor(client.status), fontSize: 10, fontWeight: 600, display: "flex", alignItems: "center", gap: 3 }}>
+                        <StatusIcon status={client.status} size={10} /> {getStatusLabel(client.status)}
                       </div>
-                      <button onClick={(e) => { e.stopPropagation(); setRelancePopup(isOpen ? null : client.id); }} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, border: "none", background: isOpen ? "#0071e3" : "#f2f2f7", color: isOpen ? "white" : "#0071e3", fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0, transition: "all .18s" }}>
-                        <Send size={12} /> Relancer
-                      </button>
                     </div>
+                  );
+                })}
+                {allClients.length === 0 && <div style={{ textAlign: "center", color: "#86868b", padding: 20, fontSize: 13 }}>Aucun client</div>}
+              </div>
+            </div>
 
-                    {/* Inline relance panel */}
-                    {isOpen && (
-                      <div style={{ background: "linear-gradient(135deg,#f8f9ff,#f0f8ff)", border: "1px solid rgba(0,113,227,.12)", borderRadius: "0 0 14px 14px", padding: "14px 16px 16px", marginBottom: 1, borderTop: "1px dashed rgba(0,113,227,.15)" }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .7, textTransform: "uppercase", marginBottom: 10 }}>
-                          Envoyer une relance à {client.name}
-                        </div>
-                        <div style={{ display: "flex", gap: 8 }}>
-                          {[
-                            { ch: "Email",    Icon: Mail,          color: "#0071e3" },
-                            { ch: "SMS",      Icon: MessageSquare, color: "#34C759" },
-                            { ch: "WhatsApp", Icon: Smartphone,    color: "#25D366" },
-                            { ch: "Vocal IA", Icon: Mic,           color: "#FF9F0A" },
-                          ].map((btn) => (
-                            <button key={btn.ch} onClick={() => { logRelance(client.id, btn.ch); setRelancePopup(null); }}
-                              style={{ flex: 1, padding: "9px 6px", borderRadius: 10, border: "none", background: btn.color + "12", color: btn.color, fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, transition: "all .15s" }}
-                              onMouseEnter={(e) => { e.currentTarget.style.background = btn.color + "22"; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.background = btn.color + "12"; }}>
-                              <btn.Icon size={16} /> {btn.ch}
-                            </button>
-                          ))}
-                        </div>
+            {/* ── PROSPECTS Section ── */}
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <div style={{ width: 6, height: 24, borderRadius: 3, background: "linear-gradient(135deg,#FF9F0A,#FF6723)" }} />
+                <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1d1d1f", margin: 0 }}>Prospects</h2>
+                <span style={{ fontSize: 13, color: "#86868b", fontWeight: 500 }}>({prospectStats.total} dossiers)</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 16 }}>
+                {[
+                  { label: "Total",      value: prospectStats.total,      color: "#FF9F0A", Icon: FolderOpen,  filter: "all"         },
+                  { label: "Complets",    value: prospectStats.complete,   color: "#34C759", Icon: CheckCircle, filter: "complete"    },
+                  { label: "En cours",    value: prospectStats.inProgress, color: "#0071e3", Icon: Clock,       filter: "in_progress" },
+                  { label: "En attente",  value: prospectStats.pending,    color: "#FF3B30", Icon: AlertCircle, filter: "pending"     },
+                ].map((s) => {
+                  const active = dashProspectFilter === s.filter;
+                  return (
+                    <div key={s.label}
+                      onClick={() => setDashProspectFilter(active ? "all" : s.filter)}
+                      style={{ background: active ? s.color : "white", borderRadius: 14, padding: "16px 18px", boxShadow: active ? `0 4px 18px ${s.color}40` : "0 2px 10px rgba(0,0,0,.05)", borderLeft: `4px solid ${s.color}`, cursor: "pointer", transition: "all .2s" }}
+                      onMouseEnter={(e) => { if (!active) e.currentTarget.style.transform = "translateY(-2px)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: active ? "white" : s.color }}>{s.value}</div>
+                        <s.Icon size={16} color={active ? "white" : s.color} />
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+                      <div style={{ fontSize: 11, color: active ? "rgba(255,255,255,.85)" : "#86868b", marginTop: 4 }}>{s.label}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ background: "white", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 600, color: "#1d1d1f", margin: 0 }}>
+                    {dashProspectFilter === "all" ? "Tous les prospects" : dashProspectFilter === "complete" ? "Prospects complets" : dashProspectFilter === "in_progress" ? "Prospects en cours" : "Prospects en attente"}
+                    <span style={{ fontSize: 12, fontWeight: 500, color: "#86868b", marginLeft: 6 }}>({allProspects.filter(p => dashProspectFilter === "all" || p.status === dashProspectFilter).length})</span>
+                  </h3>
+                  <button onClick={() => setView("prospects")} style={{ fontSize: 13, color: "#FF9F0A", background: "none", border: "none", cursor: "pointer", fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
+                    Voir tout <ChevronRight size={14} />
+                  </button>
+                </div>
+                {allProspects.filter(p => dashProspectFilter === "all" || p.status === dashProspectFilter).slice(0, 5).map((prospect) => {
+                  const prog = getProspectProgress(prospect);
+                  const docsDone = PROSPECT_DOC_LIST.filter(d => !!prospect.docs?.[d.id]).length;
+                  return (
+                    <div key={prospect.id} onClick={() => { setSelectedProspect(prospect); setView("prospects"); }}
+                      style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: "1px solid #f2f2f7", cursor: "pointer" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: "#FFF5E6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <MapPin size={16} color="#FF9F0A" />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#1d1d1f" }}>{prospect.name}</div>
+                        <div style={{ fontSize: 11, color: "#86868b" }}>{prospect.advisor} · {docsDone}/{PROSPECT_DOC_LIST.length} docs</div>
+                      </div>
+                      <div style={{ width: 60 }}>
+                        <div style={{ height: 4, background: "#f2f2f7", borderRadius: 2, overflow: "hidden" }}>
+                          <div style={{ width: `${prog}%`, height: "100%", background: prog === 100 ? "#34C759" : "#FF9F0A", borderRadius: 2 }} />
+                        </div>
+                        <div style={{ fontSize: 10, color: "#86868b", marginTop: 2, textAlign: "right" }}>{prog}%</div>
+                      </div>
+                      <div style={{ padding: "3px 8px", borderRadius: 20, background: getStatusColor(prospect.status) + "18", color: getStatusColor(prospect.status), fontSize: 10, fontWeight: 600, display: "flex", alignItems: "center", gap: 3 }}>
+                        <StatusIcon status={prospect.status} size={10} /> {getStatusLabel(prospect.status)}
+                      </div>
+                    </div>
+                  );
+                })}
+                {allProspects.length === 0 && <div style={{ textAlign: "center", color: "#86868b", padding: 20, fontSize: 13 }}>Aucun prospect</div>}
+              </div>
             </div>
           </div>
         )}
@@ -739,10 +975,20 @@ export default function GNIApp() {
                     <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: "#1d1d1f" }}>Nouveau dossier client</h2>
                     <button onClick={() => setShowNewClient(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#86868b" }}><X size={20} /></button>
                   </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .8, textTransform: "uppercase" }}>Civilité</label>
+                    <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                      {["M.", "Mme"].map((c) => (
+                        <button key={c} onClick={() => setNewClientCivility(c)} style={{ padding: "9px 20px", borderRadius: 10, border: newClientCivility === c ? "none" : "1px solid #d1d1d6", background: newClientCivility === c ? "#0071e3" : "white", color: newClientCivility === c ? "white" : "#3a3a3c", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{c === "M." ? "Monsieur" : "Madame"}</button>
+                      ))}
+                    </div>
+                  </div>
                   {[
-                    { label: "Nom de l'agence *", value: newClientName,  set: setNewClientName,  ph: "Ex: Century 21 Paris 8e" },
-                    { label: "Email",              value: newClientEmail, set: setNewClientEmail, ph: "contact@agence.fr" },
-                    { label: "Téléphone",          value: newClientPhone, set: setNewClientPhone, ph: "+33 1 23 45 67 89" },
+                    { label: "Nom de l'agence *",   value: newClientName,              set: setNewClientName,              ph: "Ex: Century 21 Paris 8e" },
+                    { label: "Prénom du contact",   value: newClientContactFirstName, set: setNewClientContactFirstName, ph: "Ex: Jean" },
+                    { label: "Nom du contact",      value: newClientContact,           set: setNewClientContact,           ph: "Ex: Dupont" },
+                    { label: "Email",               value: newClientEmail,             set: setNewClientEmail,             ph: "contact@agence.fr" },
+                    { label: "Téléphone",           value: newClientPhone,             set: setNewClientPhone,             ph: "+33 1 23 45 67 89" },
                   ].map((f) => (
                     <div key={f.label} style={{ marginBottom: 16 }}>
                       <label style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .8, textTransform: "uppercase" }}>{f.label}</label>
@@ -942,21 +1188,82 @@ export default function GNIApp() {
                 <div>
                   {/* Header card */}
                   <div style={{ background: "white", borderRadius: 16, padding: 24, marginBottom: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)" }}>
+                    {editingClient && editingClient.id === client.id ? (
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                          <h3 style={{ fontSize: 16, fontWeight: 700, color: "#1d1d1f", margin: 0 }}>Modifier la fiche client</h3>
+                          <button onClick={() => setEditingClient(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#86868b" }}><X size={18} /></button>
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .5, textTransform: "uppercase" }}>Civilité</label>
+                          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                            {["M.", "Mme"].map((c) => (
+                              <button key={c} onClick={() => setEditingClient((prev) => ({ ...prev, civility: c }))} style={{ padding: "8px 18px", borderRadius: 10, border: editingClient.civility === c ? "none" : "1px solid #d1d1d6", background: editingClient.civility === c ? "#0071e3" : "white", color: editingClient.civility === c ? "white" : "#3a3a3c", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{c === "M." ? "Monsieur" : "Madame"}</button>
+                            ))}
+                          </div>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                          {[
+                            { key: "name",             label: "Nom de l'agence",  ph: "Nom" },
+                            { key: "contactFirstName", label: "Prénom du contact", ph: "Jean" },
+                            { key: "contact",          label: "Nom du contact",   ph: "Dupont" },
+                            { key: "email",            label: "E-mail",           ph: "email@agence.fr" },
+                            { key: "phone",            label: "Téléphone",        ph: "+33 6 00 00 00 00" },
+                          ].map((f) => (
+                            <div key={f.key}>
+                              <label style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .5, textTransform: "uppercase" }}>{f.label}</label>
+                              <input value={editingClient[f.key] || ""} onChange={(e) => setEditingClient((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.ph}
+                                style={{ display: "block", width: "100%", padding: "10px 12px", marginTop: 4, borderRadius: 10, border: "1px solid #d1d1d6", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                            </div>
+                          ))}
+                          {currentUser.role === "admin" && (
+                            <div>
+                              <label style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .5, textTransform: "uppercase" }}>Conseiller assigné</label>
+                              <select value={editingClient.advisor} onChange={(e) => setEditingClient((prev) => ({ ...prev, advisor: e.target.value }))}
+                                style={{ display: "block", width: "100%", padding: "10px 12px", marginTop: 4, borderRadius: 10, border: "1px solid #d1d1d6", fontSize: 13, outline: "none", boxSizing: "border-box" }}>
+                                {ADVISORS.map((a) => <option key={a} value={a}>{a}</option>)}
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+                          <button onClick={() => {
+                            const updated = { ...client, name: editingClient.name, civility: editingClient.civility, contactFirstName: editingClient.contactFirstName, contact: editingClient.contact, email: editingClient.email, phone: editingClient.phone, advisor: editingClient.advisor };
+                            setClients((prev) => prev.map((c) => c.id === client.id ? updated : c));
+                            saveClient(updated);
+                            setSelectedClient(updated);
+                            setEditingClient(null);
+                            showNotif("Fiche client mise à jour !");
+                          }} style={{ padding: "10px 20px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#0071e3,#00c7be)", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                            <Save size={14} /> Enregistrer
+                          </button>
+                          <button onClick={() => setEditingClient(null)} style={{ padding: "10px 20px", borderRadius: 10, border: "1px solid #d1d1d6", background: "white", color: "#3a3a3c", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                            Annuler
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div>
                         <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1d1d1f", margin: "0 0 8px", letterSpacing: -.5 }}>{client.name}</h1>
-                        <div style={{ fontSize: 13, color: "#86868b", display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                          <User size={12} /> {client.advisor} · Créé le {client.createdAt}
-                        </div>
+                        {(client.contactFirstName || client.contact) && <div style={{ fontSize: 13, color: "#3a3a3c", display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}><User size={12} /> {[client.civility, client.contactFirstName, client.contact].filter(Boolean).join(" ")}</div>}
                         <div style={{ fontSize: 13, color: "#86868b", display: "flex", alignItems: "center", gap: 16 }}>
-                          <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Mail size={12} />{client.email}</span>
-                          <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Phone size={12} />{client.phone}</span>
+                          {client.email && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Mail size={12} />{client.email}</span>}
+                          {client.phone && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Phone size={12} />{client.phone}</span>}
                         </div>
+                        <div style={{ fontSize: 12, color: "#aeaeb2", marginTop: 6 }}>{client.advisor} · Créé le {client.createdAt}</div>
                       </div>
-                      <div style={{ padding: "6px 14px", borderRadius: 20, background: getStatusColor(client.status) + "18", color: getStatusColor(client.status), fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
-                        <StatusIcon status={client.status} size={13} /> {getStatusLabel(client.status)}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <button onClick={() => setEditingClient({ id: client.id, name: client.name, civility: client.civility || "", contactFirstName: client.contactFirstName || "", contact: client.contact || "", email: client.email, phone: client.phone, advisor: client.advisor })}
+                          style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "#f2f2f7", color: "#0071e3", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                          <Pencil size={12} /> Modifier
+                        </button>
+                        <div style={{ padding: "6px 14px", borderRadius: 20, background: getStatusColor(client.status) + "18", color: getStatusColor(client.status), fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                          <StatusIcon status={client.status} size={13} /> {getStatusLabel(client.status)}
+                        </div>
                       </div>
                     </div>
+                    )}
                     <div style={{ marginTop: 16 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                         <span style={{ fontSize: 13, color: "#86868b" }}>Progression globale</span>
@@ -981,6 +1288,10 @@ export default function GNIApp() {
                           style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "#0071e3", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                           Copier
                         </button>
+                        <a href={`mailto:${client.email || ""}?subject=${encodeURIComponent("Votre espace GNI - Dépôt de documents")}&body=${encodeURIComponent(`Bonjour${(client.contactFirstName || client.contact) ? " " + [client.civility, client.contact].filter(Boolean).join(" ") : ""},\n\nVous pouvez déposer vos documents directement sur votre espace dédié en cliquant sur le lien ci-dessous :\n\n${PORTAIL_URL}?id=${client.id}\n\nN'hésitez pas à revenir vers nous si vous avez des questions.\n\nCordialement,\n${currentUser.name}\nGroupe National de l'Immobilier`)}`}
+                          style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "#FF9F0A", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                          <Send size={12} /> Partager
+                        </a>
                       </div>
                     </div>
                   </div>
@@ -1046,19 +1357,26 @@ export default function GNIApp() {
                 {/* Right column */}
                 <div>
                   {/* Send relance */}
-                  <div style={{ background: "white", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)", marginBottom: 16 }}>
-                    <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 16px", color: "#1d1d1f" }}>Envoyer une relance</h3>
-                    {[
-                      { ch: "Email",           Icon: Mail,          color: "#0071e3" },
-                      { ch: "SMS",             Icon: MessageSquare, color: "#34C759" },
-                      { ch: "WhatsApp",        Icon: Smartphone,    color: "#25D366" },
-                      { ch: "Assistant vocal", Icon: Mic,           color: "#FF9F0A" },
-                    ].map((btn) => (
-                      <button key={btn.ch} onClick={() => logRelance(client.id, btn.ch)} style={{ width: "100%", padding: "10px 14px", marginBottom: 8, borderRadius: 10, border: "none", background: btn.color + "10", color: btn.color, fontSize: 13, fontWeight: 600, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8 }}>
-                        <btn.Icon size={14} /> {btn.ch} <Send size={12} style={{ marginLeft: "auto", opacity: .4 }} />
-                      </button>
-                    ))}
-                  </div>
+                  {isRelanceAllowed(client) ? (
+                    <div style={{ background: "white", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)", marginBottom: 16 }}>
+                      <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 16px", color: "#1d1d1f" }}>Envoyer une relance</h3>
+                      {[
+                        { ch: "Email",           Icon: Mail,          color: "#0071e3" },
+                        { ch: "SMS",             Icon: MessageSquare, color: "#34C759" },
+                        { ch: "Assistant vocal", Icon: Mic,           color: "#FF9F0A" },
+                      ].map((btn) => (
+                        <button key={btn.ch} onClick={() => logRelance(client.id, btn.ch)} style={{ width: "100%", padding: "10px 14px", marginBottom: 8, borderRadius: 10, border: "none", background: btn.color + "10", color: btn.color, fontSize: 13, fontWeight: 600, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8 }}>
+                          <btn.Icon size={14} /> {btn.ch} <Send size={12} style={{ marginLeft: "auto", opacity: .4 }} />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ background: "white", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)", marginBottom: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#aeaeb2", fontSize: 13, fontStyle: "italic" }}>
+                        <BellOff size={15} /> Relances désactivées
+                      </div>
+                    </div>
+                  )}
 
                   {/* Missing items */}
                   <div style={{ background: "white", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)", marginBottom: 16 }}>
@@ -1131,12 +1449,51 @@ export default function GNIApp() {
               <p style={{ fontSize: 14, color: "#86868b", margin: "4px 0 0" }}>Configurez vos relances automatiques — textes, canaux et délais</p>
             </div>
 
+            {/* Activation relances */}
+            <div style={{ background: "white", borderRadius: 20, padding: 24, boxShadow: "0 2px 16px rgba(0,0,0,.07)", marginBottom: 24, border: "1px solid rgba(0,0,0,.04)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#1d1d1f" }}>Activation des relances</div>
+                  <div style={{ fontSize: 12, color: "#86868b", marginTop: 2 }}>Activez ou désactivez les relances globalement et par commercial</div>
+                </div>
+                <button onClick={() => setRelancesEnabled((v) => !v)}
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 10, border: "none", background: relancesEnabled ? "#34C75918" : "#FF3B3018", color: relancesEnabled ? "#34C759" : "#FF3B30", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all .18s" }}>
+                  {relancesEnabled ? <><ToggleRight size={18} /> Activées</> : <><ToggleLeft size={18} /> Désactivées</>}
+                </button>
+              </div>
+
+              {relancesEnabled && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .8, textTransform: "uppercase", marginBottom: 12 }}>Par commercial</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10 }}>
+                    {team.map((member) => {
+                      const enabled = member.relancesEnabled !== false;
+                      return (
+                        <button key={member.id}
+                          onClick={() => setTeam((prev) => prev.map((m) => m.id === member.id ? { ...m, relancesEnabled: !enabled } : m))}
+                          style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 12, border: `1.5px solid ${enabled ? "#34C75940" : "#e5e5ea"}`, background: enabled ? "#34C75908" : "#fafafa", cursor: "pointer", transition: "all .18s" }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 10, background: enabled ? "linear-gradient(135deg,#0071e3,#00c7be)" : "#e5e5ea", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ fontSize: 12, fontWeight: 800, color: "white" }}>{(member.firstName[0] + member.lastName[0]).toUpperCase()}</span>
+                          </div>
+                          <div style={{ flex: 1, textAlign: "left" }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "#1d1d1f" }}>{member.firstName}</div>
+                            <div style={{ fontSize: 11, color: enabled ? "#34C759" : "#aeaeb2" }}>{enabled ? "Relances actives" : "Relances désactivées"}</div>
+                          </div>
+                          {enabled ? <Bell size={14} color="#34C759" /> : <BellOff size={14} color="#aeaeb2" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {relanceTemplates.map((tpl, idx) => {
               const isGenerating = generatingId === tpl.id;
               const CHANNELS = [
                 { key: "email",    Icon: Mail,          label: "Email",    color: "#0071e3" },
                 { key: "sms",      Icon: MessageSquare, label: "SMS",      color: "#34C759" },
-                { key: "whatsapp", Icon: Smartphone,    label: "WhatsApp", color: "#25D366" },
+                { key: "vocal",    Icon: Mic,           label: "Assistant vocal", color: "#FF9F0A" },
               ];
               const toggleChannel = (key) => setRelanceTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, channels: { ...t.channels, [key]: !t.channels[key] } } : t));
               const updateDelay   = (d)   => setRelanceTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, delay: Math.max(1, t.delay + d) } : t));
@@ -1184,7 +1541,7 @@ export default function GNIApp() {
                       )}
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                      <span style={{ fontSize: 11, color: "#aeaeb2" }}>Utilisez <strong style={{ color: "#86868b" }}>{"{nom}"}</strong> pour personnaliser</span>
+                      <span style={{ fontSize: 11, color: "#aeaeb2" }}>Utilisez <strong style={{ color: "#86868b" }}>{"{civilite} {nom}"}</strong> pour personnaliser</span>
                       <button onClick={() => generateMessage(tpl.id, tpl.delay)} disabled={isGenerating}
                         style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 10, border: "none", background: isGenerating ? "#f2f2f7" : "linear-gradient(135deg,#6e40c9,#0071e3)", color: isGenerating ? "#aeaeb2" : "white", fontSize: 12, fontWeight: 600, cursor: isGenerating ? "default" : "pointer", boxShadow: isGenerating ? "none" : "0 2px 10px rgba(110,64,201,.3)", whiteSpace: "nowrap" }}>
                         {isGenerating ? <Loader size={12} /> : <Sparkles size={12} />}
@@ -1199,6 +1556,105 @@ export default function GNIApp() {
             <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
             <button onClick={() => showNotif("Scénarios sauvegardés !")} style={{ padding: "12px 28px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#0071e3,#00c7be)", color: "white", fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: "0 4px 14px rgba(0,113,227,.3)", display: "flex", alignItems: "center", gap: 8 }}>
               <Check size={15} /> Sauvegarder les scénarios
+            </button>
+
+            {/* ── PROSPECT RELANCES ── */}
+            <div style={{ marginTop: 40, marginBottom: 28 }}>
+              <h1 style={{ fontSize: 26, fontWeight: 700, color: "#1d1d1f", margin: 0, letterSpacing: -.5 }}>Relances Prospection</h1>
+              <p style={{ fontSize: 14, color: "#86868b", margin: "4px 0 0" }}>Configurez les relances pour vos prospects</p>
+            </div>
+
+            {/* Activation relances prospect */}
+            <div style={{ background: "white", borderRadius: 20, padding: 24, boxShadow: "0 2px 16px rgba(0,0,0,.07)", marginBottom: 24, border: "1px solid rgba(255,159,10,.1)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: prospectRelancesEnabled ? 20 : 0 }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#1d1d1f" }}>Activation des relances prospect</div>
+                  <div style={{ fontSize: 12, color: "#86868b", marginTop: 2 }}>Activez ou désactivez les relances prospect globalement et par commercial</div>
+                </div>
+                <button onClick={() => setProspectRelancesEnabled((v) => !v)}
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 10, border: "none", background: prospectRelancesEnabled ? "#34C75918" : "#FF3B3018", color: prospectRelancesEnabled ? "#34C759" : "#FF3B30", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all .18s" }}>
+                  {prospectRelancesEnabled ? <><ToggleRight size={18} /> Activées</> : <><ToggleLeft size={18} /> Désactivées</>}
+                </button>
+              </div>
+
+              {prospectRelancesEnabled && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .8, textTransform: "uppercase", marginBottom: 12 }}>Par commercial</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10 }}>
+                    {team.map((member) => {
+                      const enabled = member.prospectRelancesEnabled !== false;
+                      return (
+                        <button key={member.id}
+                          onClick={() => setTeam((prev) => prev.map((m) => m.id === member.id ? { ...m, prospectRelancesEnabled: !enabled } : m))}
+                          style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 12, border: `1.5px solid ${enabled ? "#FF9F0A40" : "#e5e5ea"}`, background: enabled ? "#FF9F0A08" : "#fafafa", cursor: "pointer", transition: "all .18s" }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 10, background: enabled ? "linear-gradient(135deg,#FF9F0A,#FF6723)" : "#e5e5ea", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ fontSize: 12, fontWeight: 800, color: "white" }}>{(member.firstName[0] + member.lastName[0]).toUpperCase()}</span>
+                          </div>
+                          <div style={{ flex: 1, textAlign: "left" }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "#1d1d1f" }}>{member.firstName}</div>
+                            <div style={{ fontSize: 11, color: enabled ? "#FF9F0A" : "#aeaeb2" }}>{enabled ? "Relances actives" : "Relances désactivées"}</div>
+                          </div>
+                          {enabled ? <Bell size={14} color="#FF9F0A" /> : <BellOff size={14} color="#aeaeb2" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {prospectTemplates.map((tpl, idx) => {
+              const isGenerating = generatingId === `prospect_${tpl.id}`;
+              const CHANNELS = [
+                { key: "email", Icon: Mail,          label: "Email",           color: "#0071e3" },
+                { key: "sms",   Icon: MessageSquare, label: "SMS",             color: "#34C759" },
+                { key: "vocal", Icon: Mic,           label: "Assistant vocal", color: "#FF9F0A" },
+              ];
+              const toggleChannel = (key) => setProspectTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, channels: { ...t.channels, [key]: !t.channels[key] } } : t));
+              const updateDelay   = (d)   => setProspectTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, delay: Math.max(1, t.delay + d) } : t));
+
+              return (
+                <div key={tpl.id} style={{ background: "white", borderRadius: 20, padding: 24, boxShadow: "0 2px 16px rgba(0,0,0,.07)", marginBottom: 16, border: "1px solid rgba(255,159,10,.1)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#1d1d1f" }}>Relance prospect {idx + 1}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#f5f5f7", borderRadius: 12, padding: "6px 14px" }}>
+                      <Clock size={13} color="#86868b" />
+                      <span style={{ fontSize: 12, color: "#86868b", fontWeight: 500 }}>Envoi après</span>
+                      <button onClick={() => updateDelay(-1)} style={{ width: 22, height: 22, borderRadius: 6, border: "none", background: "white", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,.1)" }}><Minus size={11} /></button>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: "#1d1d1f", minWidth: 24, textAlign: "center" }}>{tpl.delay}</span>
+                      <button onClick={() => updateDelay(1)}  style={{ width: 22, height: 22, borderRadius: 6, border: "none", background: "white", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,.1)" }}><Plus  size={11} /></button>
+                      <span style={{ fontSize: 12, color: "#86868b", fontWeight: 500 }}>jour{tpl.delay > 1 ? "s" : ""}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .8, textTransform: "uppercase", marginBottom: 10 }}>Canaux d'envoi</div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {CHANNELS.map(({ key, Icon, label, color }) => {
+                        const active = tpl.channels[key];
+                        return (
+                          <button key={key} onClick={() => toggleChannel(key)} style={{ flex: 1, padding: "10px 8px", borderRadius: 12, border: `2px solid ${active ? color : "#e5e5ea"}`, background: active ? color + "10" : "#fafafa", color: active ? color : "#86868b", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "all .18s" }}>
+                            <Icon size={14} /> {label} {active && <Check size={11} strokeWidth={3} />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .8, textTransform: "uppercase", marginBottom: 8 }}>Message</div>
+                    <textarea value={tpl.message} onChange={(e) => setProspectTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, message: e.target.value } : t))}
+                      style={{ width: "100%", padding: "13px 14px", borderRadius: 12, border: "1px solid #d1d1d6", fontSize: 13, color: "#1d1d1f", resize: "none", height: 90, boxSizing: "border-box", outline: "none", lineHeight: 1.6 }} />
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
+                      <span style={{ fontSize: 11, color: "#aeaeb2" }}>Utilisez <strong style={{ color: "#86868b" }}>{"{civilite} {nom}"}</strong> pour personnaliser</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            <button onClick={() => showNotif("Scénarios prospect sauvegardés !")} style={{ padding: "12px 28px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#FF9F0A,#FF6723)", color: "white", fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: "0 4px 14px rgba(255,159,10,.3)", display: "flex", alignItems: "center", gap: 8 }}>
+              <Check size={15} /> Sauvegarder les scénarios prospect
             </button>
           </div>
         )}
@@ -1276,55 +1732,91 @@ export default function GNIApp() {
                       ))}
 
                       {/* Password section */}
-                      <div style={{ background: "#f8f9ff", border: "1px solid #e0e7ff", borderRadius: 14, padding: "16px 18px", marginTop: 20, marginBottom: 20 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "#3730a3", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                          <Lock size={13} /> Mot de passe de l'espace sécurisé
+                      <div style={{ background: editingMember._isAdmin ? "#fff8f0" : "#f8f9ff", border: `1px solid ${editingMember._isAdmin ? "#fed7aa" : "#e0e7ff"}`, borderRadius: 14, padding: "16px 18px", marginTop: 20, marginBottom: 20 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: editingMember._isAdmin ? "#c2410c" : "#3730a3", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                          <Lock size={13} /> {editingMember._isAdmin ? "Mot de passe administrateur" : "Mot de passe de l'espace sécurisé"}
                         </div>
-                        {editingMember.generatedPassword ? (
-                          <div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "white", borderRadius: 8, padding: "10px 14px", border: "1px solid #c7d2fe", marginBottom: 8 }}>
-                              <span style={{ fontFamily: "monospace", fontSize: 15, fontWeight: 700, color: "#1d1d1f", letterSpacing: 1, flex: 1 }}>{editingMember.generatedPassword}</span>
-                              <button onClick={() => { navigator.clipboard?.writeText(editingMember.generatedPassword); showNotif("Mot de passe copié !"); }}
-                                style={{ fontSize: 11, color: "#0071e3", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Copier</button>
-                            </div>
-                            <div style={{ fontSize: 11, color: "#6366f1" }}>Transmettez ce mot de passe au conseiller de façon sécurisée.</div>
-                          </div>
-                        ) : (
-                          <div style={{ fontSize: 12, color: "#6b7280" }}>
-                            {editingMember.password
-                              ? <span>Mot de passe actif — générez-en un nouveau si nécessaire.</span>
-                              : <span>Aucun mot de passe défini pour ce conseiller.</span>}
-                          </div>
+                        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 10 }}>
+                          Modifiez le mot de passe ou conservez l'actuel.
+                        </div>
+                        <div style={{ position: "relative", marginBottom: 10 }}>
+                          <input
+                            type={editingMember._showPwd ? "text" : "password"}
+                            value={editingMember.password || ""}
+                            onChange={(e) => setEditingMember((prev) => ({ ...prev, password: e.target.value }))}
+                            placeholder="Mot de passe"
+                            style={{ display: "block", width: "100%", padding: "11px 40px 11px 14px", borderRadius: 10, border: "1px solid #d1d1d6", fontSize: 14, outline: "none", boxSizing: "border-box" }}
+                          />
+                          <button onClick={() => setEditingMember((prev) => ({ ...prev, _showPwd: !prev._showPwd }))}
+                            style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#86868b" }}>
+                            {editingMember._showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                          </button>
+                        </div>
+                        {!editingMember._isAdmin && (
+                          <button onClick={() => {
+                            const pwd = genPassword();
+                            setEditingMember((prev) => ({ ...prev, password: pwd, _showPwd: true }));
+                            showNotif("Mot de passe généré !");
+                          }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "none", background: "linear-gradient(135deg,#6e40c9,#0071e3)", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                            <RefreshCw size={12} /> Générer un mot de passe aléatoire
+                          </button>
                         )}
-                        <button onClick={() => {
-                          const pwd = genPassword();
-                          setEditingMember((prev) => ({ ...prev, generatedPassword: pwd, password: pwd }));
-                        }} style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "none", background: "linear-gradient(135deg,#6e40c9,#0071e3)", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                          <RefreshCw size={12} /> Générer un nouveau mot de passe
-                        </button>
                       </div>
 
-                      {/* Danger zone — disable access */}
-                      <div style={{ background: "#fff5f5", border: "1px solid #fecaca", borderRadius: 14, padding: "16px 18px", marginBottom: 24 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "#dc2626", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
-                          <AlertCircle size={13} /> Accès au compte
+                      {/* Danger zone — disable access (advisors only) */}
+                      {!editingMember._isAdmin && (
+                        <div style={{ background: "#fff5f5", border: "1px solid #fecaca", borderRadius: 14, padding: "16px 18px", marginBottom: 24 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#dc2626", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                            <AlertCircle size={13} /> Accès au compte
+                          </div>
+                          <div style={{ fontSize: 12, color: "#7f1d1d", marginBottom: 10, lineHeight: 1.5 }}>
+                            {editingMember.disabled
+                              ? "Ce conseiller n'a plus accès à l'application. Vous pouvez réactiver son compte."
+                              : "Désactiver l'accès empêche ce conseiller de se connecter. Ses dossiers restent accessibles."}
+                          </div>
+                          <button onClick={() => setEditingMember((prev) => ({ ...prev, disabled: !prev.disabled }))}
+                            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "none", background: editingMember.disabled ? "#22c55e" : "#FF3B30", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                            {editingMember.disabled ? <><CheckCircle size={12} /> Réactiver l'accès</> : <><UserX size={12} /> Désactiver l'accès</>}
+                          </button>
                         </div>
-                        <div style={{ fontSize: 12, color: "#7f1d1d", marginBottom: 10, lineHeight: 1.5 }}>
-                          {editingMember.disabled
-                            ? "Ce conseiller n'a plus accès à l'application. Vous pouvez réactiver son compte."
-                            : "Désactiver l'accès empêche ce conseiller de se connecter. Ses dossiers restent accessibles."}
+                      )}
+
+                      {/* Relances toggles (advisors only) */}
+                      {!editingMember._isAdmin && (
+                        <div style={{ background: "#f0f7ff", border: "1px solid #bfdbfe", borderRadius: 14, padding: "16px 18px", marginBottom: 24 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#1e40af", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                            <Bell size={13} /> Relances
+                          </div>
+                          <div style={{ display: "flex", gap: 10 }}>
+                            <button onClick={() => setEditingMember((prev) => ({ ...prev, relancesEnabled: prev.relancesEnabled === false ? true : false }))}
+                              style={{ flex: 1, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${editingMember.relancesEnabled !== false ? "#0071e340" : "#e5e5ea"}`, background: editingMember.relancesEnabled !== false ? "#0071e308" : "#fafafa", cursor: "pointer", textAlign: "left" }}>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: "#1d1d1f", marginBottom: 2 }}>Clients</div>
+                              <div style={{ fontSize: 11, color: editingMember.relancesEnabled !== false ? "#0071e3" : "#aeaeb2" }}>
+                                {editingMember.relancesEnabled !== false ? "Activées" : "Désactivées"}
+                              </div>
+                            </button>
+                            <button onClick={() => setEditingMember((prev) => ({ ...prev, prospectRelancesEnabled: prev.prospectRelancesEnabled === false ? true : false }))}
+                              style={{ flex: 1, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${editingMember.prospectRelancesEnabled !== false ? "#FF9F0A40" : "#e5e5ea"}`, background: editingMember.prospectRelancesEnabled !== false ? "#FF9F0A08" : "#fafafa", cursor: "pointer", textAlign: "left" }}>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: "#1d1d1f", marginBottom: 2 }}>Prospects</div>
+                              <div style={{ fontSize: 11, color: editingMember.prospectRelancesEnabled !== false ? "#FF9F0A" : "#aeaeb2" }}>
+                                {editingMember.prospectRelancesEnabled !== false ? "Activées" : "Désactivées"}
+                              </div>
+                            </button>
+                          </div>
                         </div>
-                        <button onClick={() => setEditingMember((prev) => ({ ...prev, disabled: !prev.disabled }))}
-                          style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "none", background: editingMember.disabled ? "#22c55e" : "#FF3B30", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                          {editingMember.disabled ? <><CheckCircle size={12} /> Réactiver l'accès</> : <><UserX size={12} /> Désactiver l'accès</>}
-                        </button>
-                      </div>
+                      )}
 
                       <div style={{ display: "flex", gap: 10 }}>
                         <button onClick={() => setEditingMember(null)} style={{ flex: 1, padding: "12px 0", borderRadius: 10, border: "1px solid #d1d1d6", background: "white", fontSize: 14, cursor: "pointer", color: "#3a3a3c" }}>Annuler</button>
                         <button onClick={() => {
-                          const { generatedPassword, ...toSave } = editingMember;
-                          setTeam((prev) => prev.map((m) => m.id === toSave.id ? toSave : m));
+                          const { generatedPassword, _isAdmin, _showAdminPwd, _showPwd, ...toSave } = editingMember;
+                          if (_isAdmin) {
+                            setAdminProfile(toSave);
+                            setCurrentUser((prev) => ({ ...prev, name: toSave.firstName }));
+                            localStorage.setItem("gni_session", JSON.stringify({ role: "admin", name: toSave.firstName }));
+                          } else {
+                            setTeam((prev) => prev.map((m) => m.id === toSave.id ? toSave : m));
+                          }
                           setEditingMember(null);
                           showNotif("Profil mis à jour !");
                         }} style={{ flex: 2, padding: "12px 0", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#0071e3,#00c7be)", color: "white", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
@@ -1335,6 +1827,36 @@ export default function GNIApp() {
                   </div>
                 </div>
               )}
+
+              {/* Admin profile card */}
+              <div style={{ background: "linear-gradient(135deg,#1d1d1f,#2d2d30)", borderRadius: 20, padding: 24, boxShadow: "0 4px 20px rgba(0,0,0,.15)", marginBottom: 24, position: "relative" }}>
+                <div style={{ position: "absolute", top: 12, right: 12, background: "#FF9F0A", color: "white", fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 20, letterSpacing: .5, textTransform: "uppercase", display: "flex", alignItems: "center", gap: 4 }}>
+                  <Crown size={10} /> Administrateur
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                  <div style={{ width: 64, height: 64, borderRadius: 18, overflow: "hidden", background: "linear-gradient(135deg,#FF9F0A,#FF6723)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 4px 12px rgba(255,159,10,.3)" }}>
+                    {adminProfile.photo
+                      ? <img src={adminProfile.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <span style={{ fontSize: 22, fontWeight: 800, color: "white" }}>{(adminProfile.firstName[0] + (adminProfile.lastName?.[0] || "A")).toUpperCase()}</span>
+                    }
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: "white" }}>{adminProfile.firstName} {adminProfile.lastName}</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "rgba(255,255,255,.6)" }}><Mail size={11} /> {adminProfile.email}</div>
+                      {adminProfile.phone && <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "rgba(255,255,255,.6)" }}><Phone size={11} /> {adminProfile.phone}</div>}
+                    </div>
+                  </div>
+                  <button onClick={() => setEditingMember({ ...adminProfile, _isAdmin: true, generatedPassword: null })}
+                    style={{ padding: "8px 16px", borderRadius: 10, border: "1px solid rgba(255,255,255,.2)", background: "rgba(255,255,255,.1)", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "all .15s" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,.2)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,.1)"; }}>
+                    <Pencil size={12} /> Modifier
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .8, textTransform: "uppercase", marginBottom: 12 }}>Conseillers commerciaux</div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 16 }}>
                 {team.map((member) => {
@@ -1388,9 +1910,467 @@ export default function GNIApp() {
                           </div>
                         ))}
                       </div>
+
+                      {!member.disabled && (
+                        <button onClick={() => {
+                          const session = { role: "advisor", name: member.firstName, memberId: member.id, impersonatedBy: "admin" };
+                          setCurrentUser(session);
+                          localStorage.setItem("gni_session", JSON.stringify(session));
+                          setView("dashboard");
+                          showNotif(`Connecté en tant que ${member.firstName}`);
+                        }}
+                          style={{ width: "100%", marginTop: 14, padding: "8px 0", borderRadius: 10, border: "1.5px solid #0071e320", background: "#0071e308", color: "#0071e3", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "all .15s" }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = "#0071e315"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = "#0071e308"; }}>
+                          <LogOut size={12} style={{ transform: "scaleX(-1)" }} /> Se connecter en tant que {member.firstName}
+                        </button>
+                      )}
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── PROSPECTS LIST ── */}
+        {view === "prospects" && !selectedProspect && (() => {
+          const visibleProspects = prospects
+            .filter((p) => currentUser.role === "admin" || p.advisor === currentUser.name)
+            .filter((p) => filterProspectAdvisor === "all" || p.advisor === filterProspectAdvisor)
+            .filter((p) => filterProspectStatus === "all" || p.status === filterProspectStatus);
+          return (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <div>
+                  <h1 style={{ fontSize: 26, fontWeight: 700, color: "#1d1d1f", margin: 0, letterSpacing: -.5 }}>Prospection</h1>
+                  <p style={{ fontSize: 14, color: "#86868b", margin: "4px 0 0" }}>{visibleProspects.length} prospect{visibleProspects.length > 1 ? "s" : ""} en cours</p>
+                </div>
+                <button onClick={() => setShowNewProspect(true)} style={{ padding: "10px 20px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#FF9F0A,#FF6723)", color: "white", fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: "0 4px 14px rgba(255,159,10,.3)", display: "flex", alignItems: "center", gap: 6 }}>
+                  <Plus size={16} /> Nouveau prospect
+                </button>
+              </div>
+
+              {/* Filters — admin only */}
+              {currentUser.role === "admin" && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, background: "white", borderRadius: 10, padding: "6px 6px 6px 12px", boxShadow: "0 1px 6px rgba(0,0,0,.06)", border: "1px solid rgba(0,0,0,.05)" }}>
+                    <User size={13} color="#86868b" />
+                    <span style={{ fontSize: 12, color: "#86868b", fontWeight: 500 }}>Négociateur</span>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {["all", ...ADVISORS].map((a) => (
+                        <button key={a} onClick={() => setFilterProspectAdvisor(a)} style={{ padding: "4px 10px", borderRadius: 7, border: "none", background: filterProspectAdvisor === a ? "#FF9F0A" : "#f2f2f7", color: filterProspectAdvisor === a ? "white" : "#3a3a3c", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all .15s" }}>
+                          {a === "all" ? "Tous" : a}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, background: "white", borderRadius: 10, padding: "6px 6px 6px 12px", boxShadow: "0 1px 6px rgba(0,0,0,.06)", border: "1px solid rgba(0,0,0,.05)" }}>
+                    <Circle size={13} color="#86868b" />
+                    <span style={{ fontSize: 12, color: "#86868b", fontWeight: 500 }}>Statut</span>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {[{ val: "all", label: "Tous" }, { val: "pending", label: "En attente" }, { val: "in_progress", label: "En cours" }, { val: "complete", label: "Complets" }].map((opt) => (
+                        <button key={opt.val} onClick={() => setFilterProspectStatus(opt.val)} style={{ padding: "4px 10px", borderRadius: 7, border: "none", background: filterProspectStatus === opt.val ? "#FF9F0A" : "#f2f2f7", color: filterProspectStatus === opt.val ? "white" : "#3a3a3c", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all .15s" }}>
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* New prospect form */}
+              {showNewProspect && (
+                <div style={{ background: "white", borderRadius: 16, padding: 24, marginBottom: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)", border: "2px solid #FF9F0A30" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: "#1d1d1f", margin: 0 }}>Ajouter un prospect</h3>
+                    <button onClick={() => setShowNewProspect(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#86868b" }}><X size={18} /></button>
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .5, textTransform: "uppercase" }}>Civilité</label>
+                    <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                      {["M.", "Mme"].map((c) => (
+                        <button key={c} onClick={() => setNewProspectData((prev) => ({ ...prev, civility: c }))} style={{ padding: "8px 18px", borderRadius: 10, border: newProspectData.civility === c ? "none" : "1px solid #d1d1d6", background: newProspectData.civility === c ? "#FF9F0A" : "white", color: newProspectData.civility === c ? "white" : "#3a3a3c", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{c === "M." ? "Monsieur" : "Madame"}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    {[
+                      { field: "name",             label: "Nom de l'agence *",  ph: "Ex: Agence Immo Lyon",    type: "text" },
+                      { field: "contactFirstName", label: "Prénom du contact",  ph: "Ex: Jean",                type: "text" },
+                      { field: "contact",          label: "Nom du contact",     ph: "Ex: Dupont",              type: "text" },
+                      { field: "email",            label: "E-mail",             ph: "contact@agence.fr",       type: "email" },
+                      { field: "phone",            label: "Téléphone",          ph: "+33 6 00 00 00 00",       type: "tel" },
+                    ].map((f) => (
+                      <div key={f.field}>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .5, textTransform: "uppercase" }}>{f.label}</label>
+                        <input type={f.type} value={newProspectData[f.field]} onChange={(e) => setNewProspectData((prev) => ({ ...prev, [f.field]: e.target.value }))} placeholder={f.ph}
+                          style={{ display: "block", width: "100%", padding: "10px 12px", marginTop: 4, borderRadius: 10, border: "1px solid #d1d1d6", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .5, textTransform: "uppercase" }}>Notes</label>
+                    <textarea value={newProspectData.notes} onChange={(e) => setNewProspectData((prev) => ({ ...prev, notes: e.target.value }))} placeholder="Informations complémentaires..."
+                      style={{ display: "block", width: "100%", padding: "10px 12px", marginTop: 4, borderRadius: 10, border: "1px solid #d1d1d6", fontSize: 13, outline: "none", boxSizing: "border-box", resize: "none", height: 60 }} />
+                  </div>
+                  {currentUser.role === "admin" && (
+                    <div style={{ marginTop: 12 }}>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .5, textTransform: "uppercase" }}>Conseiller assigné</label>
+                      <select value={newProspectData.advisor} onChange={(e) => setNewProspectData((prev) => ({ ...prev, advisor: e.target.value }))}
+                        style={{ display: "block", width: "100%", padding: "10px 12px", marginTop: 4, borderRadius: 10, border: "1px solid #d1d1d6", fontSize: 13, outline: "none", boxSizing: "border-box" }}>
+                        {ADVISORS.map((a) => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  <button onClick={addProspect} disabled={!newProspectData.name.trim()}
+                    style={{ marginTop: 16, padding: "10px 24px", borderRadius: 10, border: "none", background: newProspectData.name.trim() ? "linear-gradient(135deg,#FF9F0A,#FF6723)" : "#e5e5ea", color: "white", fontSize: 14, fontWeight: 600, cursor: newProspectData.name.trim() ? "pointer" : "default", display: "flex", alignItems: "center", gap: 6 }}>
+                    <Plus size={14} /> Ajouter le prospect
+                  </button>
+                </div>
+              )}
+
+              {/* Grouped by advisor (admin) or flat list (advisor) */}
+              {currentUser.role === "admin" ? (() => {
+                const advisorsToShow = filterProspectAdvisor === "all" ? ADVISORS : [filterProspectAdvisor];
+                return advisorsToShow.map((advisor) => {
+                  const group = visibleProspects.filter((p) => p.advisor === advisor);
+                  if (group.length === 0) return null;
+                  const groupComplete   = group.filter((p) => p.status === "complete").length;
+                  const groupInProgress = group.filter((p) => p.status === "in_progress").length;
+                  return (
+                    <div key={advisor} style={{ marginBottom: 32 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,rgba(255,159,10,.12),rgba(255,103,35,.08))", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <User size={17} color="#FF9F0A" />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: "#1d1d1f" }}>{advisor}</div>
+                          <div style={{ fontSize: 11, color: "#86868b" }}>
+                            {group.length} prospect{group.length > 1 ? "s" : ""} · {groupComplete} complet{groupComplete > 1 ? "s" : ""} · {groupInProgress} en cours
+                          </div>
+                        </div>
+                        <div style={{ height: 1, flex: 3, background: "linear-gradient(90deg,#e5e5ea,transparent)" }} />
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 12 }}>
+                        {group.map((prospect) => {
+                          const prog = getProspectProgress(prospect);
+                          const docsDone = PROSPECT_DOC_LIST.filter(d => !!prospect.docs?.[d.id]).length;
+                          return (
+                            <div key={prospect.id} onClick={() => setSelectedProspect(prospect)}
+                              style={{ background: "white", borderRadius: 16, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,.05)", border: "1px solid rgba(255,159,10,.1)", cursor: "pointer", transition: "transform .2s,box-shadow .2s" }}
+                              onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,.10)"; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,.05)"; }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                                <div>
+                                  <div style={{ fontSize: 14, fontWeight: 700, color: "#1d1d1f" }}>{prospect.name}</div>
+                                  {(prospect.contactFirstName || prospect.contact) && <div style={{ fontSize: 12, color: "#86868b", marginTop: 2 }}>{[prospect.civility, prospect.contactFirstName, prospect.contact].filter(Boolean).join(" ")}</div>}
+                                  <div style={{ fontSize: 11, color: "#aeaeb2", marginTop: 2 }}>{prospect.createdAt}</div>
+                                </div>
+                                <div style={{ padding: "4px 10px", borderRadius: 20, background: getStatusColor(prospect.status) + "18", color: getStatusColor(prospect.status), fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                                  <StatusIcon status={prospect.status} size={11} /> {getStatusLabel(prospect.status)}
+                                </div>
+                              </div>
+                              <div style={{ marginBottom: 10 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                                  <span style={{ fontSize: 12, color: "#86868b" }}>Contrats reçus</span>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: prog === 100 ? "#34C759" : "#FF9F0A" }}>{docsDone}/{PROSPECT_DOC_LIST.length}</span>
+                                </div>
+                                <div style={{ height: 5, background: "#f2f2f7", borderRadius: 3, overflow: "hidden" }}>
+                                  <div style={{ width: `${prog}%`, height: "100%", background: prog === 100 ? "#34C759" : "linear-gradient(90deg,#FF9F0A,#FF6723)", borderRadius: 3 }} />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                });
+              })() : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(320px,1fr))", gap: 16 }}>
+                  {visibleProspects.map((prospect) => {
+                    const prog = getProspectProgress(prospect);
+                    const docsDone = PROSPECT_DOC_LIST.filter(d => !!prospect.docs?.[d.id]).length;
+                    return (
+                      <div key={prospect.id} onClick={() => setSelectedProspect(prospect)}
+                        style={{ background: "white", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)", border: "1px solid rgba(255,159,10,.1)", cursor: "pointer", transition: "transform .2s,box-shadow .2s" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,.10)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,.06)"; }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                          <div>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: "#1d1d1f" }}>{prospect.name}</div>
+                            {(prospect.contactFirstName || prospect.contact) && <div style={{ fontSize: 12, color: "#86868b", marginTop: 2 }}>{[prospect.civility, prospect.contactFirstName, prospect.contact].filter(Boolean).join(" ")}</div>}
+                            <div style={{ fontSize: 11, color: "#aeaeb2", marginTop: 2 }}>{prospect.createdAt}</div>
+                          </div>
+                          <div style={{ padding: "4px 10px", borderRadius: 20, background: getStatusColor(prospect.status) + "18", color: getStatusColor(prospect.status), fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                            <StatusIcon status={prospect.status} size={11} /> {getStatusLabel(prospect.status)}
+                          </div>
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                            <span style={{ fontSize: 12, color: "#86868b" }}>Contrats reçus</span>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: prog === 100 ? "#34C759" : "#FF9F0A" }}>{docsDone}/{PROSPECT_DOC_LIST.length}</span>
+                          </div>
+                          <div style={{ height: 5, background: "#f2f2f7", borderRadius: 3, overflow: "hidden" }}>
+                            <div style={{ width: `${prog}%`, height: "100%", background: prog === 100 ? "#34C759" : "linear-gradient(90deg,#FF9F0A,#FF6723)", borderRadius: 3 }} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {visibleProspects.length === 0 && !showNewProspect && (
+                <div style={{ textAlign: "center", padding: "60px 20px", color: "#aeaeb2" }}>
+                  <Building2 size={40} style={{ marginBottom: 12, opacity: .4 }} />
+                  <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Aucun prospect</div>
+                  <div style={{ fontSize: 13 }}>Ajoutez votre premier prospect pour commencer</div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── PROSPECT DETAIL ── */}
+        {view === "prospects" && selectedProspect && (() => {
+          const prospect = prospects.find((p) => p.id === selectedProspect.id);
+          if (!prospect) return null;
+          const prog = getProspectProgress(prospect);
+          return (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <button onClick={() => setSelectedProspect(null)} style={{ fontSize: 14, color: "#FF9F0A", background: "none", border: "none", cursor: "pointer", fontWeight: 500, padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                  <ChevronRight size={14} style={{ transform: "rotate(180deg)" }} /> Retour aux prospects
+                </button>
+                <button onClick={() => {
+                  if (!window.confirm(`Supprimer le prospect "${prospect.name}" ?`)) return;
+                  setProspects((prev) => prev.filter((p) => p.id !== prospect.id));
+                  setSelectedProspect(null);
+                  showNotif("Prospect supprimé !");
+                }} style={{ fontSize: 13, color: "#FF3B30", background: "rgba(255,59,48,.08)", border: "none", cursor: "pointer", fontWeight: 600, padding: "7px 14px", borderRadius: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                  <X size={13} /> Supprimer
+                </button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20 }}>
+                {/* Left — info + docs */}
+                <div>
+                  {/* Header */}
+                  <div style={{ background: "white", borderRadius: 16, padding: 24, marginBottom: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)" }}>
+                    {editingProspectInfo && editingProspectInfo.id === prospect.id ? (
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                          <h3 style={{ fontSize: 16, fontWeight: 700, color: "#1d1d1f", margin: 0 }}>Modifier la fiche prospect</h3>
+                          <button onClick={() => setEditingProspectInfo(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#86868b" }}><X size={18} /></button>
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .5, textTransform: "uppercase" }}>Civilité</label>
+                          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                            {["M.", "Mme"].map((c) => (
+                              <button key={c} onClick={() => setEditingProspectInfo((prev) => ({ ...prev, civility: c }))} style={{ padding: "8px 18px", borderRadius: 10, border: editingProspectInfo.civility === c ? "none" : "1px solid #d1d1d6", background: editingProspectInfo.civility === c ? "#FF9F0A" : "white", color: editingProspectInfo.civility === c ? "white" : "#3a3a3c", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{c === "M." ? "Monsieur" : "Madame"}</button>
+                            ))}
+                          </div>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                          {[
+                            { key: "name",             label: "Nom de l'agence",  ph: "Nom" },
+                            { key: "contactFirstName", label: "Prénom du contact", ph: "Jean" },
+                            { key: "contact",          label: "Nom du contact",   ph: "Dupont" },
+                            { key: "email",            label: "E-mail",           ph: "email@agence.fr" },
+                            { key: "phone",            label: "Téléphone",        ph: "+33 6 00 00 00 00" },
+                          ].map((f) => (
+                            <div key={f.key}>
+                              <label style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .5, textTransform: "uppercase" }}>{f.label}</label>
+                              <input value={editingProspectInfo[f.key] || ""} onChange={(e) => setEditingProspectInfo((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.ph}
+                                style={{ display: "block", width: "100%", padding: "10px 12px", marginTop: 4, borderRadius: 10, border: "1px solid #d1d1d6", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                            </div>
+                          ))}
+                          {currentUser.role === "admin" && (
+                            <div>
+                              <label style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .5, textTransform: "uppercase" }}>Conseiller assigné</label>
+                              <select value={editingProspectInfo.advisor} onChange={(e) => setEditingProspectInfo((prev) => ({ ...prev, advisor: e.target.value }))}
+                                style={{ display: "block", width: "100%", padding: "10px 12px", marginTop: 4, borderRadius: 10, border: "1px solid #d1d1d6", fontSize: 13, outline: "none", boxSizing: "border-box" }}>
+                                {ADVISORS.map((a) => <option key={a} value={a}>{a}</option>)}
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ marginTop: 12 }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .5, textTransform: "uppercase" }}>Notes</label>
+                          <textarea value={editingProspectInfo.notes || ""} onChange={(e) => setEditingProspectInfo((prev) => ({ ...prev, notes: e.target.value }))} placeholder="Informations complémentaires..."
+                            style={{ display: "block", width: "100%", padding: "10px 12px", marginTop: 4, borderRadius: 10, border: "1px solid #d1d1d6", fontSize: 13, outline: "none", boxSizing: "border-box", resize: "none", height: 60 }} />
+                        </div>
+                        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+                          <button onClick={() => {
+                            const updated = { ...prospect, name: editingProspectInfo.name, civility: editingProspectInfo.civility, contactFirstName: editingProspectInfo.contactFirstName, contact: editingProspectInfo.contact, email: editingProspectInfo.email, phone: editingProspectInfo.phone, advisor: editingProspectInfo.advisor, notes: editingProspectInfo.notes };
+                            setProspects((prev) => prev.map((p) => p.id === prospect.id ? updated : p));
+                            setSelectedProspect(updated);
+                            setEditingProspectInfo(null);
+                            showNotif("Fiche prospect mise à jour !");
+                          }} style={{ padding: "10px 20px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#FF9F0A,#FF6723)", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                            <Save size={14} /> Enregistrer
+                          </button>
+                          <button onClick={() => setEditingProspectInfo(null)} style={{ padding: "10px 20px", borderRadius: 10, border: "1px solid #d1d1d6", background: "white", color: "#3a3a3c", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                            Annuler
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div>
+                        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1d1d1f", margin: "0 0 8px", letterSpacing: -.5 }}>{prospect.name}</h1>
+                        {(prospect.contactFirstName || prospect.contact) && <div style={{ fontSize: 13, color: "#3a3a3c", display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}><User size={12} /> {[prospect.civility, prospect.contactFirstName, prospect.contact].filter(Boolean).join(" ")}</div>}
+                        <div style={{ fontSize: 13, color: "#86868b", display: "flex", alignItems: "center", gap: 16 }}>
+                          {prospect.email && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Mail size={12} />{prospect.email}</span>}
+                          {prospect.phone && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Phone size={12} />{prospect.phone}</span>}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#aeaeb2", marginTop: 6 }}>{prospect.advisor} · Créé le {prospect.createdAt}</div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <button onClick={() => setEditingProspectInfo({ id: prospect.id, name: prospect.name, civility: prospect.civility || "", contactFirstName: prospect.contactFirstName || "", contact: prospect.contact, email: prospect.email, phone: prospect.phone, advisor: prospect.advisor, notes: prospect.notes })}
+                          style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "#FFF5E6", color: "#FF9F0A", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                          <Pencil size={12} /> Modifier
+                        </button>
+                        <div style={{ padding: "6px 14px", borderRadius: 20, background: getStatusColor(prospect.status) + "18", color: getStatusColor(prospect.status), fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                          <StatusIcon status={prospect.status} size={13} /> {getStatusLabel(prospect.status)}
+                        </div>
+                      </div>
+                    </div>
+                    )}
+                    <div style={{ marginTop: 16 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 13, color: "#86868b" }}>Contrats reçus</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: prog === 100 ? "#34C759" : "#FF9F0A" }}>{prog}%</span>
+                      </div>
+                      <div style={{ height: 8, background: "#f2f2f7", borderRadius: 4, overflow: "hidden" }}>
+                        <div style={{ width: `${prog}%`, height: "100%", background: prog === 100 ? "#34C759" : "linear-gradient(90deg,#FF9F0A,#FF6723)", borderRadius: 4 }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div style={{ background: "white", borderRadius: 16, padding: 20, marginBottom: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)" }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px", color: "#1d1d1f", display: "flex", alignItems: "center", gap: 6 }}>
+                      <ClipboardList size={14} color="#FF9F0A" /> Notes du conseiller
+                    </h3>
+                    <textarea value={prospect.notes || ""} onChange={(e) => setProspects((prev) => prev.map((p) => p.id === prospect.id ? { ...p, notes: e.target.value } : p))}
+                      placeholder="Ajoutez des notes sur ce prospect..."
+                      style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1px solid #d1d1d6", fontSize: 13, color: "#1d1d1f", resize: "none", height: 80, boxSizing: "border-box", outline: "none", lineHeight: 1.6 }} />
+                  </div>
+
+                  {/* Lien portail prospect */}
+                  <div style={{ background: "white", borderRadius: 16, padding: 20, marginBottom: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)" }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px", color: "#1d1d1f", display: "flex", alignItems: "center", gap: 6 }}>
+                      <Link size={14} color="#FF9F0A" /> Lien portail prospect
+                    </h3>
+                    <div style={{ padding: "12px 14px", background: "#FFF8EE", borderRadius: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <a href={`${PORTAIL_URL}?prospect=${prospect.id}`} target="_blank" rel="noopener noreferrer"
+                        style={{ flex: 1, fontSize: 12, color: "#FF9F0A", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textDecoration: "none", minWidth: 0 }}>
+                        {PORTAIL_URL}?prospect={prospect.id}
+                      </a>
+                      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                        <a href={`${PORTAIL_URL}?prospect=${prospect.id}`} target="_blank" rel="noopener noreferrer"
+                          style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "#34C759", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                          <Eye size={12} /> Ouvrir
+                        </a>
+                        <button onClick={() => { navigator.clipboard.writeText(`${PORTAIL_URL}?prospect=${prospect.id}`); showNotif("Lien copié !"); }}
+                          style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "#FF9F0A", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                          Copier
+                        </button>
+                        <a href={`mailto:${prospect.email || ""}?subject=${encodeURIComponent("Votre espace GNI - Dépôt de contrats")}&body=${encodeURIComponent(`Bonjour${(prospect.contactFirstName || prospect.contact) ? " " + [prospect.civility, prospect.contact].filter(Boolean).join(" ") : ""},\n\nVous pouvez déposer vos contrats directement sur votre espace dédié en cliquant sur le lien ci-dessous :\n\n${PORTAIL_URL}?prospect=${prospect.id}\n\nN'hésitez pas à revenir vers nous si vous avez des questions.\n\nCordialement,\n${currentUser.name}\nGroupe National de l'Immobilier`)}`}
+                          style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "#0071e3", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                          <Send size={12} /> Partager
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Documents / Contrats */}
+                  <div style={{ background: "white", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)" }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 16px", color: "#1d1d1f", display: "flex", alignItems: "center", gap: 6 }}>
+                      <FileText size={14} color="#FF9F0A" /> Contrats à récupérer
+                    </h3>
+                    {PROSPECT_DOC_LIST.map((item) => (
+                      <FileItem key={item.id} item={item} value={prospect.docs[item.id]} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Right — relances */}
+                <div>
+                  {/* Send relance */}
+                  {isProspectRelanceAllowed(prospect) ? (
+                    <div style={{ background: "white", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)", marginBottom: 16 }}>
+                      <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 16px", color: "#1d1d1f" }}>Envoyer une relance</h3>
+                      {[
+                        { ch: "Email",           Icon: Mail,          color: "#0071e3" },
+                        { ch: "SMS",             Icon: MessageSquare, color: "#34C759" },
+                        { ch: "Assistant vocal", Icon: Mic,           color: "#FF9F0A" },
+                      ].map((btn) => (
+                        <button key={btn.ch} onClick={() => logProspectRelance(prospect.id, btn.ch)} style={{ width: "100%", padding: "10px 14px", marginBottom: 8, borderRadius: 10, border: "none", background: btn.color + "10", color: btn.color, fontSize: 13, fontWeight: 600, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8 }}>
+                          <btn.Icon size={14} /> {btn.ch} <Send size={12} style={{ marginLeft: "auto", opacity: .4 }} />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ background: "white", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)", marginBottom: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#aeaeb2", fontSize: 13, fontStyle: "italic" }}>
+                        <BellOff size={15} /> Relances désactivées
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Missing docs */}
+                  <div style={{ background: "white", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)", marginBottom: 16 }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 12px", color: "#1d1d1f" }}>Contrats manquants</h3>
+                    {(() => {
+                      const missing = getProspectMissing(prospect);
+                      if (missing.length === 0) return (
+                        <div style={{ fontSize: 13, color: "#34C759", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                          <CheckCircle size={15} /> Tous les contrats reçus !
+                        </div>
+                      );
+                      return missing.map((label, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: "1px solid #f5f5f7", fontSize: 12, color: "#3a3a3c" }}>
+                          <Circle size={7} color="#FF9F0A" fill="#FF9F0A" />
+                          <span style={{ flex: 1, lineHeight: 1.3 }}>{label}</span>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+
+                  {/* Relance history */}
+                  <div style={{ background: "white", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)" }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 14px", color: "#1d1d1f", display: "flex", alignItems: "center", gap: 6 }}>
+                      <Clock size={14} color="#86868b" /> Historique des relances
+                    </h3>
+                    {(!prospect.relanceHistory || prospect.relanceHistory.length === 0) ? (
+                      <div style={{ fontSize: 12, color: "#aeaeb2", fontStyle: "italic" }}>Aucune relance envoyée</div>
+                    ) : prospect.relanceHistory.map((entry, i) => {
+                      const meta = CHANNEL_META[entry.channel] || { Icon: Send, color: "#86868b" };
+                      const isLast = i === prospect.relanceHistory.length - 1;
+                      return (
+                        <div key={entry.id} style={{ marginBottom: isLast ? 0 : 14, paddingBottom: isLast ? 0 : 14, borderBottom: isLast ? "none" : "1px solid #f5f5f7" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                            <div style={{ width: 26, height: 26, borderRadius: 8, background: meta.color + "14", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <meta.Icon size={12} color={meta.color} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: "#1d1d1f" }}>{entry.channel}</div>
+                              <div style={{ fontSize: 11, color: "#86868b" }}>par {entry.by} · {formatDateTime(entry.date)}</div>
+                            </div>
+                          </div>
+                          {entry.missing?.length > 0 && (
+                            <div style={{ fontSize: 11, color: "#aeaeb2", marginLeft: 34 }}>Manquants : {entry.missing.join(", ")}</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           );
