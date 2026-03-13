@@ -88,8 +88,9 @@ INSTRUCTIONS :
           },
           voice: {
             provider: "11labs",
-            voiceId: "21m00Tcm4TlvDq8ikWAM",
+            voiceId: "pFZP5JQG7iQjIQuC4Bku",
           },
+          language: "fr",
           firstMessage: `Bonjour, ${civility || ""} ${contact || ""}. Je suis l'assistant du Groupe National de l'Immobilier. Comment allez-vous ?`,
           endCallMessage: "Merci pour votre temps, bonne journée !",
           transcriber: {
