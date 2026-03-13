@@ -78,12 +78,6 @@ INSTRUCTIONS :
       body: JSON.stringify({
         phoneNumberId: VAPI_PHONE_NUMBER_ID,
         assistantId: "2a4b1d9b-c76a-499d-9044-a75ad9e519f4",
-        assistantOverrides: {
-          model: {
-            messages: [{ role: "system", content: systemPrompt }],
-          },
-          firstMessage: `Bonjour, ${civility || ""} ${contact || ""}. Je suis l'assistant du Groupe National de l'Immobilier. Comment allez-vous ?`,
-        },
         customer: {
           number: phone,
         },
