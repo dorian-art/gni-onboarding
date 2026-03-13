@@ -77,27 +77,15 @@ INSTRUCTIONS :
       },
       body: JSON.stringify({
         phoneNumberId: VAPI_PHONE_NUMBER_ID,
-        customer: {
-          number: phone,
-        },
-        assistant: {
+        assistantId: "2a4b1d9b-c76a-499d-9044-a75ad9e519f4",
+        assistantOverrides: {
           model: {
-            provider: "openai",
-            model: "gpt-4o",
             messages: [{ role: "system", content: systemPrompt }],
           },
-          voice: {
-            provider: "azure",
-            voiceId: "fr-FR-DeniseNeural",
-          },
-          language: "fr",
           firstMessage: `Bonjour, ${civility || ""} ${contact || ""}. Je suis l'assistant du Groupe National de l'Immobilier. Comment allez-vous ?`,
-          endCallMessage: "Merci pour votre temps, bonne journée !",
-          transcriber: {
-            provider: "deepgram",
-            language: "fr",
-          },
-          serverUrl: `${req.headers["x-forwarded-proto"] || "https"}://${req.headers.host}/api/vapi-webhook`,
+        },
+        customer: {
+          number: phone,
         },
       }),
     });
