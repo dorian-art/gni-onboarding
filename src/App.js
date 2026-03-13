@@ -258,7 +258,7 @@ export default function GNIApp() {
   const [prospectTemplates, setProspectTemplates] = useState(() => { try { const s = localStorage.getItem("gni_prospect_templates"); return s ? JSON.parse(s) : INIT_PROSPECT_TEMPLATES; } catch { return INIT_PROSPECT_TEMPLATES; } });
   const [prospectRelancesEnabled, setProspectRelancesEnabled] = useState(() => { try { const s = localStorage.getItem("gni_prospect_relances_enabled"); return s !== null ? JSON.parse(s) : true; } catch { return true; } });
   const [callingClientId,  setCallingClientId]   = useState(null);
-  const [activeCallId,     setActiveCallId]      = useState(null);
+  const [, setActiveCallId] = useState(null);
   const [callTranscripts,  setCallTranscripts]   = useState({});
 
   // ── Persistance localStorage ──────────────────────────────────────────────
