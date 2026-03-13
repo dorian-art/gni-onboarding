@@ -87,10 +87,9 @@ INSTRUCTIONS :
             messages: [{ role: "system", content: systemPrompt }],
           },
           voice: {
-            provider: "11labs",
-            voiceId: "pFZP5JQG7iQjIQuC4Bku",
+            provider: "azure",
+            voiceId: "fr-FR-DeniseNeural",
           },
-          language: "fr",
           firstMessage: `Bonjour, ${civility || ""} ${contact || ""}. Je suis l'assistant du Groupe National de l'Immobilier. Comment allez-vous ?`,
           endCallMessage: "Merci pour votre temps, bonne journée !",
           transcriber: {
