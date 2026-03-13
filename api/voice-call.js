@@ -82,14 +82,15 @@ INSTRUCTIONS :
         },
         assistant: {
           model: {
-            provider: "anthropic",
-            model: "claude-sonnet-4-20250514",
+            provider: "openai",
+            model: "gpt-4o",
             messages: [{ role: "system", content: systemPrompt }],
           },
           voice: {
             provider: "azure",
             voiceId: "fr-FR-DeniseNeural",
           },
+          language: "fr",
           firstMessage: `Bonjour, ${civility || ""} ${contact || ""}. Je suis l'assistant du Groupe National de l'Immobilier. Comment allez-vous ?`,
           endCallMessage: "Merci pour votre temps, bonne journée !",
           transcriber: {
