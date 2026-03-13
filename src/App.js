@@ -257,6 +257,9 @@ export default function GNIApp() {
   const [showNewProspect,   setShowNewProspect]   = useState(false);
   const [prospectTemplates, setProspectTemplates] = useState(() => { try { const s = localStorage.getItem("gni_prospect_templates"); return s ? JSON.parse(s) : INIT_PROSPECT_TEMPLATES; } catch { return INIT_PROSPECT_TEMPLATES; } });
   const [prospectRelancesEnabled, setProspectRelancesEnabled] = useState(() => { try { const s = localStorage.getItem("gni_prospect_relances_enabled"); return s !== null ? JSON.parse(s) : true; } catch { return true; } });
+  const [callingClientId,  setCallingClientId]   = useState(null);
+  const [activeCallId,     setActiveCallId]      = useState(null);
+  const [callTranscripts,  setCallTranscripts]   = useState({});
 
   // ── Persistance localStorage ──────────────────────────────────────────────
   useEffect(() => { localStorage.setItem("gni_team", JSON.stringify(team)); }, [team]);
@@ -426,6 +429,10 @@ export default function GNIApp() {
   const logProspectRelance = (prospectId, channel) => {
     const prospect = prospects.find((p) => p.id === prospectId);
     if (!prospect) return;
+    if (channel === "Assistant vocal") {
+      initiateVoiceCall(prospect, "prospect");
+      return;
+    }
     const entry = { id: Date.now(), date: new Date().toISOString(), channel, by: currentUser.name, missing: getProspectMissing(prospect) };
     setProspects((prev) => prev.map((p) => p.id === prospectId ? { ...p, relanceHistory: [entry, ...(p.relanceHistory || [])] } : p));
     showNotif(`Relance ${channel} envoyée à ${prospect.name} !`);
@@ -474,6 +481,10 @@ export default function GNIApp() {
   const logRelance = (clientId, channel) => {
     const client = clients.find((c) => c.id === clientId);
     if (!client) return;
+    if (channel === "Assistant vocal") {
+      initiateVoiceCall(client, "client");
+      return;
+    }
     const entry = {
       id: Date.now(),
       date: new Date().toISOString(),
@@ -485,6 +496,123 @@ export default function GNIApp() {
     setClients((prev) => prev.map((c) => c.id === clientId ? updated : c));
     saveClient(updated);
     showNotif(`Relance ${channel} envoyée à ${client.name} !`);
+  };
+
+  const initiateVoiceCall = async (entity, type = "client") => {
+    if (callingClientId) return;
+    const id = entity.id;
+    const missingDocs = type === "client" ? getMissingLabels(entity) : getProspectMissing(entity);
+
+    // Find the applicable relance template
+    const templates = type === "client" ? relanceTemplates : prospectTemplates;
+    const daysSinceCreation = Math.floor((Date.now() - new Date(entity.createdAt).getTime()) / 86400000);
+    const applicableTemplate = [...templates].reverse().find(t => t.channels?.vocal && daysSinceCreation >= t.delay) || templates[0];
+    const message = (applicableTemplate?.message || "")
+      .replace("{civilite}", entity.civility || "")
+      .replace("{nom}", entity.contact || entity.name);
+
+    setCallingClientId(id);
+    showNotif("Appel en cours...");
+
+    try {
+      const res = await fetch("/api/voice-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: entity.phone,
+          clientName: entity.name,
+          civility: entity.civility || "",
+          contactFirstName: entity.contactFirstName || "",
+          contact: entity.contact || "",
+          missingDocs,
+          message,
+          clientId: String(id),
+          clientType: type,
+          initiatedBy: currentUser.name,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Erreur lors de l'appel");
+      }
+
+      const { callId } = await res.json();
+      setActiveCallId(callId);
+
+      // Log the relance entry with callId
+      const entry = {
+        id: Date.now(),
+        date: new Date().toISOString(),
+        channel: "Assistant vocal",
+        by: currentUser.name,
+        missing: missingDocs,
+        callId,
+        callStatus: "in_progress",
+      };
+
+      if (type === "client") {
+        const client = clients.find(c => c.id === id);
+        if (client) {
+          const updated = { ...client, relanceHistory: [entry, ...(client.relanceHistory || [])] };
+          setClients(prev => prev.map(c => c.id === id ? updated : c));
+          saveClient(updated);
+        }
+      } else {
+        setProspects(prev => prev.map(p => p.id === id ? { ...p, relanceHistory: [entry, ...(p.relanceHistory || [])] } : p));
+      }
+
+      // Poll for call status
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`/api/call-status?callId=${encodeURIComponent(callId)}`);
+          if (!statusRes.ok) return;
+          const statusData = await statusRes.json();
+
+          if (statusData.status === "ended" || statusData.status === "failed") {
+            clearInterval(pollInterval);
+            setCallingClientId(null);
+            setActiveCallId(null);
+
+            // Store transcript
+            if (statusData.transcript || statusData.summary) {
+              setCallTranscripts(prev => ({ ...prev, [callId]: { transcript: statusData.transcript, summary: statusData.summary, duration: statusData.durationSeconds } }));
+            }
+
+            // Update the relance entry with call results
+            const updateEntry = (entries) => entries.map(e =>
+              e.callId === callId ? { ...e, callStatus: statusData.status, duration: statusData.durationSeconds, summary: statusData.summary } : e
+            );
+
+            if (type === "client") {
+              setClients(prev => prev.map(c => c.id === id ? { ...c, relanceHistory: updateEntry(c.relanceHistory || []) } : c));
+            } else {
+              setProspects(prev => prev.map(p => p.id === id ? { ...p, relanceHistory: updateEntry(p.relanceHistory || []) } : p));
+            }
+
+            showNotif(statusData.status === "ended"
+              ? `Appel terminé (${Math.round((statusData.durationSeconds || 0) / 60)} min)`
+              : "L'appel a échoué"
+            );
+          }
+        } catch (e) {
+          console.error("Poll error:", e);
+        }
+      }, 5000);
+
+      // Safety: stop polling after 5 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        setCallingClientId(prev => prev === id ? null : prev);
+        setActiveCallId(prev => prev === callId ? null : prev);
+      }, 300000);
+
+    } catch (e) {
+      console.error("Voice call error:", e);
+      setCallingClientId(null);
+      setActiveCallId(null);
+      showNotif("Erreur : " + (e.message || "Impossible de lancer l'appel"));
+    }
   };
 
   const handleLogin = () => {
@@ -1341,11 +1469,16 @@ export default function GNIApp() {
                         { ch: "Email",           Icon: Mail,          color: "#0071e3" },
                         { ch: "SMS",             Icon: MessageSquare, color: "#34C759" },
                         { ch: "Assistant vocal", Icon: Mic,           color: "#FF9F0A" },
-                      ].map((btn) => (
-                        <button key={btn.ch} onClick={() => logRelance(client.id, btn.ch)} style={{ width: "100%", padding: "10px 14px", marginBottom: 8, borderRadius: 10, border: "none", background: btn.color + "10", color: btn.color, fontSize: 13, fontWeight: 600, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8 }}>
-                          <btn.Icon size={14} /> {btn.ch} <Send size={12} style={{ marginLeft: "auto", opacity: .4 }} />
-                        </button>
-                      ))}
+                      ].map((btn) => {
+                        const isVocal = btn.ch === "Assistant vocal";
+                        const isCalling = isVocal && callingClientId === client.id;
+                        return (
+                          <button key={btn.ch} onClick={() => !isCalling && logRelance(client.id, btn.ch)} disabled={isCalling} style={{ width: "100%", padding: "10px 14px", marginBottom: 8, borderRadius: 10, border: "none", background: isCalling ? btn.color + "20" : btn.color + "10", color: btn.color, fontSize: 13, fontWeight: 600, cursor: isCalling ? "not-allowed" : "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8, opacity: isCalling ? .7 : 1 }}>
+                            {isCalling ? <Loader size={14} style={{ animation: "spin 1s linear infinite" }} /> : <btn.Icon size={14} />} {isCalling ? "Appel en cours..." : btn.ch} {!isCalling && <Send size={12} style={{ marginLeft: "auto", opacity: .4 }} />}
+                            {isCalling && <Phone size={12} style={{ marginLeft: "auto", animation: "pulse 1.5s ease-in-out infinite" }} />}
+                          </button>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div style={{ background: "white", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)", marginBottom: 16 }}>
@@ -1396,6 +1529,24 @@ export default function GNIApp() {
                           <div style={{ fontSize: 11, color: "#aeaeb2", marginBottom: 6, display: "flex", alignItems: "center", gap: 4 }}>
                             <Clock size={10} /> {formatDateTime(entry.date)}
                           </div>
+                          {entry.callId && (
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, marginBottom: 6 }}>
+                              {entry.callStatus === "in_progress" && <span style={{ color: "#FF9F0A", display: "flex", alignItems: "center", gap: 4 }}><Loader size={10} style={{ animation: "spin 1s linear infinite" }} /> Appel en cours...</span>}
+                              {entry.callStatus === "ended" && entry.duration != null && <span style={{ color: "#34C759" }}>{Math.floor(entry.duration / 60)}:{String(entry.duration % 60).padStart(2, "0")} min</span>}
+                              {entry.callStatus === "failed" && <span style={{ color: "#FF3B30" }}>Appel échoué</span>}
+                              {(entry.summary || callTranscripts[entry.callId]?.summary) && (
+                                <button onClick={() => setCallTranscripts(prev => ({ ...prev, [`show_${entry.callId}`]: !prev[`show_${entry.callId}`] }))} style={{ background: "none", border: "1px solid #e5e5ea", borderRadius: 6, padding: "2px 8px", fontSize: 10, color: "#0071e3", cursor: "pointer" }}>
+                                  {callTranscripts[`show_${entry.callId}`] ? "Masquer" : "Voir résumé"}
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          {entry.callId && callTranscripts[`show_${entry.callId}`] && (entry.summary || callTranscripts[entry.callId]?.summary) && (
+                            <div style={{ background: "#f0f4ff", borderRadius: 8, padding: "8px 10px", marginBottom: 6, fontSize: 11, color: "#3a3a3c", lineHeight: 1.5 }}>
+                              <div style={{ fontSize: 10, fontWeight: 600, color: "#0071e3", letterSpacing: .5, textTransform: "uppercase", marginBottom: 4 }}>Résumé de l'appel</div>
+                              {entry.summary || callTranscripts[entry.callId]?.summary}
+                            </div>
+                          )}
                           {entry.missing && entry.missing.length > 0 && (
                             <div style={{ background: "#f9f9fb", borderRadius: 8, padding: "8px 10px" }}>
                               <div style={{ fontSize: 10, fontWeight: 600, color: "#aeaeb2", letterSpacing: .5, textTransform: "uppercase", marginBottom: 5 }}>
@@ -2285,11 +2436,16 @@ export default function GNIApp() {
                         { ch: "Email",           Icon: Mail,          color: "#0071e3" },
                         { ch: "SMS",             Icon: MessageSquare, color: "#34C759" },
                         { ch: "Assistant vocal", Icon: Mic,           color: "#FF9F0A" },
-                      ].map((btn) => (
-                        <button key={btn.ch} onClick={() => logProspectRelance(prospect.id, btn.ch)} style={{ width: "100%", padding: "10px 14px", marginBottom: 8, borderRadius: 10, border: "none", background: btn.color + "10", color: btn.color, fontSize: 13, fontWeight: 600, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8 }}>
-                          <btn.Icon size={14} /> {btn.ch} <Send size={12} style={{ marginLeft: "auto", opacity: .4 }} />
-                        </button>
-                      ))}
+                      ].map((btn) => {
+                        const isVocal = btn.ch === "Assistant vocal";
+                        const isCalling = isVocal && callingClientId === prospect.id;
+                        return (
+                          <button key={btn.ch} onClick={() => !isCalling && logProspectRelance(prospect.id, btn.ch)} disabled={isCalling} style={{ width: "100%", padding: "10px 14px", marginBottom: 8, borderRadius: 10, border: "none", background: isCalling ? btn.color + "20" : btn.color + "10", color: btn.color, fontSize: 13, fontWeight: 600, cursor: isCalling ? "not-allowed" : "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8, opacity: isCalling ? .7 : 1 }}>
+                            {isCalling ? <Loader size={14} style={{ animation: "spin 1s linear infinite" }} /> : <btn.Icon size={14} />} {isCalling ? "Appel en cours..." : btn.ch} {!isCalling && <Send size={12} style={{ marginLeft: "auto", opacity: .4 }} />}
+                            {isCalling && <Phone size={12} style={{ marginLeft: "auto", animation: "pulse 1.5s ease-in-out infinite" }} />}
+                          </button>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div style={{ background: "white", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,.06)", marginBottom: 16 }}>
@@ -2339,6 +2495,24 @@ export default function GNIApp() {
                               <div style={{ fontSize: 11, color: "#86868b" }}>par {entry.by} · {formatDateTime(entry.date)}</div>
                             </div>
                           </div>
+                          {entry.callId && (
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, marginLeft: 34, marginBottom: 4 }}>
+                              {entry.callStatus === "in_progress" && <span style={{ color: "#FF9F0A", display: "flex", alignItems: "center", gap: 4 }}><Loader size={10} style={{ animation: "spin 1s linear infinite" }} /> Appel en cours...</span>}
+                              {entry.callStatus === "ended" && entry.duration != null && <span style={{ color: "#34C759" }}>{Math.floor(entry.duration / 60)}:{String(entry.duration % 60).padStart(2, "0")} min</span>}
+                              {entry.callStatus === "failed" && <span style={{ color: "#FF3B30" }}>Appel échoué</span>}
+                              {(entry.summary || callTranscripts[entry.callId]?.summary) && (
+                                <button onClick={() => setCallTranscripts(prev => ({ ...prev, [`show_${entry.callId}`]: !prev[`show_${entry.callId}`] }))} style={{ background: "none", border: "1px solid #e5e5ea", borderRadius: 6, padding: "2px 8px", fontSize: 10, color: "#0071e3", cursor: "pointer" }}>
+                                  {callTranscripts[`show_${entry.callId}`] ? "Masquer" : "Voir résumé"}
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          {entry.callId && callTranscripts[`show_${entry.callId}`] && (entry.summary || callTranscripts[entry.callId]?.summary) && (
+                            <div style={{ background: "#f0f4ff", borderRadius: 8, padding: "8px 10px", marginLeft: 34, marginBottom: 4, fontSize: 11, color: "#3a3a3c", lineHeight: 1.5 }}>
+                              <div style={{ fontSize: 10, fontWeight: 600, color: "#0071e3", letterSpacing: .5, textTransform: "uppercase", marginBottom: 4 }}>Résumé de l'appel</div>
+                              {entry.summary || callTranscripts[entry.callId]?.summary}
+                            </div>
+                          )}
                           {entry.missing?.length > 0 && (
                             <div style={{ fontSize: 11, color: "#aeaeb2", marginLeft: 34 }}>Manquants : {entry.missing.join(", ")}</div>
                           )}
