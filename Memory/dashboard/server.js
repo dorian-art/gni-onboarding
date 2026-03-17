@@ -2,7 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 3737;
+const PORT = process.env.PORT || 3737;
 const TASKS_FILE = path.join(__dirname, '..', 'Tasks.json');
 const LOG_FILE = path.join(__dirname, '..', 'Tasks.log');
 
