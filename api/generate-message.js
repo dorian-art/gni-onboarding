@@ -3,7 +3,10 @@ module.exports = async function handler(req, res) {
 
   // Auth check
   const secret = process.env.API_SECRET;
-  if (secret && req.headers["x-api-secret"] !== secret) return res.status(401).json({ error: "Unauthorized" });
+  const authHeader = req.headers.authorization;
+  const hasSecret = secret && (req.headers["x-api-secret"] === secret || req.query.secret === secret);
+  const hasJwt = authHeader && authHeader.startsWith("Bearer ");
+  if (!hasSecret && !hasJwt) return res.status(401).json({ error: "Unauthorized" });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" });
@@ -23,7 +26,7 @@ module.exports = async function handler(req, res) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-6",
         max_tokens: 1000,
         messages: [{ role: "user", content: prompt }],
       }),

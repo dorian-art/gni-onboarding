@@ -1,5 +1,5 @@
-const SUPABASE_URL = "https://niueqiwxhljhouqsjqqx.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pdWVxaXd4aGxqaG91cXNqcXF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwODYzNzYsImV4cCI6MjA4ODY2MjM3Nn0.I1SqvRG3-boMOd2F9SW0yyZG5iFMAwjGHvsxadOOjg0";
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://niueqiwxhljhouqsjqqx.supabase.co";
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 function escapeHtml(str) {
   return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
@@ -60,6 +60,7 @@ module.exports = async function handler(req, res) {
         refresh_token: tokens.refresh_token,
         expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
         google_email: userInfo.email || "",
+        scopes: tokens.scope || "",
       }),
     });
 

@@ -99,12 +99,12 @@ const PROSPECT_DOC_LIST = [
 ];
 
 const INIT_PROSPECT_TEMPLATES = [
-  { id: 1, delay: 3,  channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, suite à notre échange, je me permets de revenir vers vous. Nous serions ravis de vous accompagner dans votre projet avec le Groupe National de l'Immobilier. Avez-vous pu avancer sur les documents évoqués ?\n\n{documents_manquants}" },
-  { id: 2, delay: 7,  channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, je reviens vers vous concernant votre intégration au réseau GNI. N'hésitez pas à me contacter si vous avez des questions.\n\nDocuments en attente :\n{documents_manquants}" },
-  { id: 3, delay: 14, channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, sans nouvelles de votre part, je souhaitais savoir si vous étiez toujours intéressé par le réseau GNI.\n\nPour rappel, il nous manque :\n{documents_manquants}\n\nJe reste disponible pour en discuter à votre convenance." },
-  { id: 4, delay: 21, channels: { email: true, sms: false, vocal: true }, message: "Bonjour {civilite} {nom}, la direction du Groupe National de l'Immobilier tient à revenir personnellement vers vous. Votre candidature nous intéresse et nous aimerions finaliser votre dossier.\n\nÉléments manquants :\n{documents_manquants}\n\nNous sommes à votre disposition pour un échange téléphonique si vous le souhaitez." },
-  { id: 5, delay: 28, channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, nous vous contactons une dernière fois concernant votre projet d'intégration au réseau GNI. Sans retour de votre part sous 7 jours, nous considérerons que vous ne souhaitez plus poursuivre.\n\n{documents_manquants}\n\nNous espérons sincèrement pouvoir collaborer avec vous." },
-  { id: 6, delay: 35, channels: { email: true, sms: false, vocal: false }, message: "Bonjour {civilite} {nom}, malgré nos différentes relances, nous n'avons pas reçu de retour. Nous allons clôturer votre dossier de candidature.\n\nSi vous changez d'avis à l'avenir, n'hésitez pas à nous recontacter. Le réseau GNI reste ouvert à votre candidature." },
+  { id: 1, delay: 3,  channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, suite à notre échange, je me permets de revenir vers vous. Nous serions ravis de vous accompagner dans votre projet avec le Groupe National de l'Immobilier. Avez-vous pu avancer sur les documents évoqués ?\n\n{documents_manquants}", smsMessage: "Bonjour {civilite} {nom}, suite à notre échange, avez-vous pu avancer sur votre candidature GNI ? On reste dispo !" },
+  { id: 2, delay: 7,  channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, je reviens vers vous concernant votre intégration au réseau GNI. N'hésitez pas à me contacter si vous avez des questions.\n\nDocuments en attente :\n{documents_manquants}", smsMessage: "Bonjour {civilite} {nom}, candidature GNI en attente depuis 7j. Des questions ? Répondez à ce SMS, on vous rappelle." },
+  { id: 3, delay: 14, channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, sans nouvelles de votre part, je souhaitais savoir si vous étiez toujours intéressé par le réseau GNI.\n\nPour rappel, il nous manque :\n{documents_manquants}\n\nJe reste disponible pour en discuter à votre convenance.", smsMessage: "Bonjour {civilite} {nom}, toujours intéressé par le réseau GNI ? Je reste dispo pour échanger. Répondez à ce SMS." },
+  { id: 4, delay: 21, channels: { email: true, sms: false, vocal: true }, message: "Bonjour {civilite} {nom}, la direction du Groupe National de l'Immobilier tient à revenir personnellement vers vous. Votre candidature nous intéresse et nous aimerions finaliser votre dossier.\n\nÉléments manquants :\n{documents_manquants}\n\nNous sommes à votre disposition pour un échange téléphonique si vous le souhaitez.", smsMessage: "Bonjour {civilite} {nom}, la direction GNI tient à vous recontacter. Votre candidature nous intéresse. Disponible pour un appel ?" },
+  { id: 5, delay: 28, channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, nous vous contactons une dernière fois concernant votre projet d'intégration au réseau GNI. Sans retour de votre part sous 7 jours, nous considérerons que vous ne souhaitez plus poursuivre.\n\n{documents_manquants}\n\nNous espérons sincèrement pouvoir collaborer avec vous.", smsMessage: "Bonjour {civilite} {nom}, dernière relance GNI. Sans réponse sous 7j, on clos votre candidature. Intéressé ? Répondez ici." },
+  { id: 6, delay: 35, channels: { email: true, sms: false, vocal: false }, message: "Bonjour {civilite} {nom}, malgré nos différentes relances, nous n'avons pas reçu de retour. Nous allons clôturer votre dossier de candidature.\n\nSi vous changez d'avis à l'avenir, n'hésitez pas à nous recontacter. Le réseau GNI reste ouvert à votre candidature.", smsMessage: "Bonjour {civilite} {nom}, candidature GNI clôturée. N'hésitez pas à nous recontacter si vous changez d'avis." },
 ];
 
 const prospectCatHasDocs = (docs, catId) => {
@@ -213,12 +213,12 @@ const MOCK_CLIENTS = [
 ];
 
 const INIT_TEMPLATES = [
-  { id: 1, delay: 3,  channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, nous attendons encore vos documents pour finaliser votre dossier d'adhésion au réseau GNI. Merci de nous les transmettre dès que possible.\n\n{documents_manquants}" },
-  { id: 2, delay: 7,  channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, votre dossier d'adhésion au Groupe National de l'Immobilier est toujours incomplet. Nous restons disponibles pour vous accompagner.\n\nIl nous manque encore :\n{documents_manquants}" },
-  { id: 3, delay: 14, channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, sans réponse de votre part sous 48h, nous ne pourrons pas finaliser votre intégration au réseau GNI. N'hésitez pas à nous contacter.\n\nPour rappel, les éléments manquants :\n{documents_manquants}" },
-  { id: 4, delay: 21, channels: { email: true, sms: false, vocal: true }, message: "Bonjour {civilite} {nom}, la direction du Groupe National de l'Immobilier souhaite personnellement revenir vers vous. Votre dossier d'adhésion reste en attente depuis plusieurs semaines.\n\nÉléments toujours manquants :\n{documents_manquants}\n\nNous restons convaincus que notre collaboration serait bénéfique et souhaitons vous accompagner pour finaliser ces démarches." },
-  { id: 5, delay: 28, channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, nous vous relançons une dernière fois concernant votre dossier d'adhésion au réseau GNI. Sans retour de votre part sous 7 jours, nous considérerons que vous ne souhaitez plus poursuivre votre intégration.\n\nPour rappel :\n{documents_manquants}\n\nNous espérons sincèrement pouvoir vous compter parmi nos partenaires." },
-  { id: 6, delay: 35, channels: { email: true, sms: false, vocal: false }, message: "Bonjour {civilite} {nom}, malgré nos différentes relances, nous n'avons pas eu de retour de votre part. Nous allons procéder à la clôture de votre dossier d'adhésion.\n\nSi vous souhaitez reprendre le processus à l'avenir, n'hésitez pas à nous recontacter. Le réseau GNI reste ouvert à votre candidature." },
+  { id: 1, delay: 3,  channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, nous attendons encore vos documents pour finaliser votre dossier d'adhésion au réseau GNI. Merci de nous les transmettre dès que possible.\n\n{documents_manquants}", smsMessage: "Bonjour {civilite} {nom}, documents en attente pour votre adhésion GNI. Accédez à votre dossier via le lien ci-dessous." },
+  { id: 2, delay: 7,  channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, votre dossier d'adhésion au Groupe National de l'Immobilier est toujours incomplet. Nous restons disponibles pour vous accompagner.\n\nIl nous manque encore :\n{documents_manquants}", smsMessage: "Bonjour {civilite} {nom}, dossier GNI incomplet depuis 7j. On reste dispo pour vous aider. Lien dossier ci-dessous." },
+  { id: 3, delay: 14, channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, sans réponse de votre part sous 48h, nous ne pourrons pas finaliser votre intégration au réseau GNI. N'hésitez pas à nous contacter.\n\nPour rappel, les éléments manquants :\n{documents_manquants}", smsMessage: "Bonjour {civilite} {nom}, dernier rappel : répondez sous 48h pour finaliser votre adhésion GNI. Lien ci-dessous." },
+  { id: 4, delay: 21, channels: { email: true, sms: false, vocal: true }, message: "Bonjour {civilite} {nom}, la direction du Groupe National de l'Immobilier souhaite personnellement revenir vers vous. Votre dossier d'adhésion reste en attente depuis plusieurs semaines.\n\nÉléments toujours manquants :\n{documents_manquants}\n\nNous restons convaincus que notre collaboration serait bénéfique et souhaitons vous accompagner pour finaliser ces démarches.", smsMessage: "Bonjour {civilite} {nom}, la direction GNI revient vers vous. Votre dossier est en attente depuis 3 semaines. Contactez-nous." },
+  { id: 5, delay: 28, channels: { email: true, sms: true, vocal: true }, message: "Bonjour {civilite} {nom}, nous vous relançons une dernière fois concernant votre dossier d'adhésion au réseau GNI. Sans retour de votre part sous 7 jours, nous considérerons que vous ne souhaitez plus poursuivre votre intégration.\n\nPour rappel :\n{documents_manquants}\n\nNous espérons sincèrement pouvoir vous compter parmi nos partenaires.", smsMessage: "Bonjour {civilite} {nom}, dernière relance GNI. Sans réponse sous 7j, votre dossier sera clôturé. Lien ci-dessous." },
+  { id: 6, delay: 35, channels: { email: true, sms: false, vocal: false }, message: "Bonjour {civilite} {nom}, malgré nos différentes relances, nous n'avons pas eu de retour de votre part. Nous allons procéder à la clôture de votre dossier d'adhésion.\n\nSi vous souhaitez reprendre le processus à l'avenir, n'hésitez pas à nous recontacter. Le réseau GNI reste ouvert à votre candidature.", smsMessage: "Bonjour {civilite} {nom}, dossier GNI clôturé. Recontactez-nous si vous souhaitez reprendre votre adhésion." },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -320,6 +320,8 @@ export default function GNIApp() {
   const [newClientContact,  setNewClientContact]  = useState("");
   const [newClientAdvisor,  setNewClientAdvisor]  = useState("Sandra");
   const [relanceTemplates,  setRelanceTemplates]  = useState(INIT_TEMPLATES);
+  const [relanceMsgTab,     setRelanceMsgTab]     = useState("email");
+  const [prospectMsgTab,    setProspectMsgTab]    = useState("email");
   const [manualRelanceMsg, setManualRelanceMsg]  = useState("Bonjour {civilite} {nom},\n\nNous nous permettons de revenir vers vous concernant votre dossier d'adhésion au réseau GNI. Afin de finaliser votre intégration, nous aurions besoin des éléments suivants :\n\n{documents_manquants}\n\nNous restons à votre entière disposition pour vous accompagner dans cette démarche. N'hésitez pas à nous contacter si vous avez la moindre question.");
   const [manualProspectMsg, setManualProspectMsg] = useState("Bonjour {civilite} {nom},\n\nSuite à notre échange, nous nous permettons de revenir vers vous concernant votre projet d'intégration au réseau GNI. Afin de poursuivre votre candidature, nous aurions besoin des documents suivants :\n\n{documents_manquants}\n\nNous restons à votre entière disposition pour vous accompagner. N'hésitez pas à nous contacter si vous avez la moindre question.");
   const [activeTab,         setActiveTab]         = useState("docs");
@@ -598,28 +600,13 @@ export default function GNIApp() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Auto-clôture J+45 & alertes conseiller ─────────────────────────────────
+  // ── Alertes conseiller (3+ relances sans réponse) ───────────────────────────
   useEffect(() => {
     if (!currentUser || clients.length === 0) return;
-    const now = Date.now();
     const alerts = [];
     clients.forEach((client) => {
       if (client.status === "complete" || client.status === "abandoned") return;
-      const created = new Date(client.createdAt).getTime();
-      if (isNaN(created)) return;
-      const days = Math.floor((now - created) / 86400000);
-      const missing = getMissingLabels(client);
-      if (missing.length === 0) return; // dossier complet, pas de clôture
-
-      // Clôture automatique après 45 jours
-      if (days >= 45) {
-        const updated = { ...client, status: "abandoned" };
-        setClients((prev) => prev.map((c) => c.id === client.id ? updated : c));
-        saveClient(updated);
-        showNotif(`Dossier de ${client.name} clôturé automatiquement (J+45 sans réponse)`);
-      }
-      // Alerte conseiller après 3 relances sans réponse
-      else if ((client.relanceHistory || []).length >= 3 && currentUser.name === client.advisor) {
+      if ((client.relanceHistory || []).length >= 3 && currentUser.name === client.advisor) {
         alerts.push(client.name);
       }
     });
@@ -628,26 +615,6 @@ export default function GNIApp() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, clients.length]);
-
-  // Auto-clôture prospects J+45
-  useEffect(() => {
-    if (!currentUser || prospects.length === 0) return;
-    const now = Date.now();
-    prospects.forEach((prospect) => {
-      if (prospect.status === "complete" || prospect.status === "abandoned") return;
-      const created = new Date(prospect.createdAt).getTime();
-      if (isNaN(created)) return;
-      const days = Math.floor((now - created) / 86400000);
-      const missing = getProspectMissing(prospect);
-      if (missing.length === 0) return;
-
-      if (days >= 45) {
-        setProspects((prev) => prev.map((p) => p.id === prospect.id ? { ...p, status: "abandoned" } : p));
-        showNotif(`Dossier prospect de ${prospect.name} clôturé automatiquement (J+45 sans réponse)`);
-      }
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, prospects.length]);
 
   const saveClient = async (client) => {
     skipRefreshRef.current = true;
@@ -1132,38 +1099,44 @@ export default function GNIApp() {
     showNotif("Client ajouté avec succès !");
   };
 
-  const generateMessage = async (tplId, delay) => {
+  const generateMessage = async (tplId, delay, channel = "email") => {
     setGeneratingId(tplId);
+    const isSms = channel === "sms";
+    const prompt = isSms
+      ? `Génère un SMS de relance très court (max 140 caractères) pour le réseau "Groupe National de l'Immobilier" (GNI). C'est la relance J+${delay} pour une agence qui n'a pas transmis ses documents. Commence par "Bonjour {civilite} {nom},". Sois ultra-concis. Pas de liste de documents (utilise le lien). Pas de signature. Réponds UNIQUEMENT avec le texte du SMS.`
+      : `Génère un message de relance professionnel et chaleureux pour un réseau immobilier appelé "Groupe National de l'Immobilier" (GNI). Ce message est la relance J+${delay} envoyée à une agence immobilière (client) qui n'a pas encore transmis tous ses documents d'adhésion. Commence par "Bonjour {civilite} {nom}," (utiliser exactement ces variables). Inclus la variable {documents_manquants} dans le message pour lister les pièces manquantes (écris exactement {documents_manquants} tel quel, il sera remplacé automatiquement). Sois bref (3-4 phrases), professionnel et chaleureux. Mentionne le délai de ${delay} jours. Propose de l'aide. Pas de signature. Réponds UNIQUEMENT avec le texte du message.`;
     try {
       const res = await fetch("/api/generate-message", {
         method: "POST",
         headers: apiHeaders(),
-        body: JSON.stringify({
-          prompt: `Génère un message de relance professionnel et chaleureux pour un réseau immobilier appelé "Groupe National de l'Immobilier" (GNI). Ce message est la relance J+${delay} envoyée à une agence immobilière (client) qui n'a pas encore transmis tous ses documents d'adhésion. Commence par "Bonjour {civilite} {nom}," (utiliser exactement ces variables). Inclus la variable {documents_manquants} dans le message pour lister les pièces manquantes (écris exactement {documents_manquants} tel quel, il sera remplacé automatiquement). Sois bref (3-4 phrases), professionnel et chaleureux. Mentionne le délai de ${delay} jours. Propose de l'aide. Pas de signature. Réponds UNIQUEMENT avec le texte du message.`,
-        }),
+        body: JSON.stringify({ prompt }),
       });
       const data = await res.json();
       if (!res.ok) { showNotif(`Erreur IA : ${data.error || "erreur inconnue"}`); setGeneratingId(null); return; }
-      if (data.text) setRelanceTemplates((prev) => prev.map((t) => t.id === tplId ? { ...t, message: data.text } : t));
+      const field = isSms ? "smsMessage" : "message";
+      if (data.text) setRelanceTemplates((prev) => prev.map((t) => t.id === tplId ? { ...t, [field]: data.text } : t));
     } catch (_) {
       showNotif("Erreur lors de la génération IA");
     }
     setGeneratingId(null);
   };
 
-  const generateProspectMessage = async (tplId, delay) => {
+  const generateProspectMessage = async (tplId, delay, channel = "email") => {
     setGeneratingId("p-" + tplId);
+    const isSms = channel === "sms";
+    const prompt = isSms
+      ? `Génère un SMS de relance très court (max 140 caractères) pour le réseau "Groupe National de l'Immobilier" (GNI). C'est la relance J+${delay} pour un prospect intéressé par le réseau. Commence par "Bonjour {civilite} {nom},". Sois ultra-concis. Ton chaleureux. Pas de signature. Réponds UNIQUEMENT avec le texte du SMS.`
+      : `Génère un message de relance professionnel et chaleureux pour un réseau immobilier appelé "Groupe National de l'Immobilier" (GNI). Ce message est la relance J+${delay} envoyée à un prospect (agence immobilière intéressée par le réseau mais pas encore adhérente). Commence par "Bonjour {civilite} {nom}," (utiliser exactement ces variables). Inclus la variable {documents_manquants} dans le message pour lister les documents attendus (écris exactement {documents_manquants} tel quel, il sera remplacé automatiquement). Sois bref (3-4 phrases), professionnel et chaleureux. Mentionne le délai de ${delay} jours. Propose de l'aide. Pas de signature. Réponds UNIQUEMENT avec le texte du message.`;
     try {
       const res = await fetch("/api/generate-message", {
         method: "POST",
         headers: apiHeaders(),
-        body: JSON.stringify({
-          prompt: `Génère un message de relance professionnel et chaleureux pour un réseau immobilier appelé "Groupe National de l'Immobilier" (GNI). Ce message est la relance J+${delay} envoyée à un prospect (agence immobilière intéressée par le réseau mais pas encore adhérente). Commence par "Bonjour {civilite} {nom}," (utiliser exactement ces variables). Inclus la variable {documents_manquants} dans le message pour lister les documents attendus (écris exactement {documents_manquants} tel quel, il sera remplacé automatiquement). Sois bref (3-4 phrases), professionnel et chaleureux. Mentionne le délai de ${delay} jours. Propose de l'aide. Pas de signature. Réponds UNIQUEMENT avec le texte du message.`,
-        }),
+        body: JSON.stringify({ prompt }),
       });
       const data = await res.json();
       if (!res.ok) { showNotif(`Erreur IA : ${data.error || "erreur inconnue"}`); setGeneratingId(null); return; }
-      if (data.text) setProspectTemplates((prev) => prev.map((t) => t.id === tplId ? { ...t, message: data.text } : t));
+      const field = isSms ? "smsMessage" : "message";
+      if (data.text) setProspectTemplates((prev) => prev.map((t) => t.id === tplId ? { ...t, [field]: data.text } : t));
     } catch (_) {
       showNotif("Erreur lors de la génération IA");
     }
@@ -2301,9 +2274,21 @@ export default function GNIApp() {
                   </div>
 
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .8, textTransform: "uppercase", marginBottom: 8 }}>Message</div>
+                    <div style={{ display: "flex", borderBottom: "1px solid #e5e5ea", marginBottom: 10 }}>
+                      {[{ key: "email", label: "Email", Icon: Mail }, { key: "sms", label: "SMS", Icon: MessageSquare }].map(tab => (
+                        <button key={tab.key} onClick={() => setRelanceMsgTab(tab.key)}
+                          style={{ flex: 1, padding: "8px 0", border: "none", borderBottom: `2px solid ${relanceMsgTab === tab.key ? "#0071e3" : "transparent"}`, background: "none", color: relanceMsgTab === tab.key ? "#0071e3" : "#86868b", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, transition: "all .15s" }}>
+                          <tab.Icon size={13} /> {tab.label}
+                        </button>
+                      ))}
+                    </div>
                     <div style={{ position: "relative" }}>
-                      <textarea value={tpl.message} onChange={(e) => setRelanceTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, message: e.target.value } : t))}
+                      <textarea
+                        value={relanceMsgTab === "sms" ? (tpl.smsMessage || "") : tpl.message}
+                        onChange={(e) => {
+                          const field = relanceMsgTab === "sms" ? "smsMessage" : "message";
+                          setRelanceTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, [field]: e.target.value } : t));
+                        }}
                         style={{ width: "100%", padding: "13px 14px", borderRadius: 12, border: "1px solid #d1d1d6", fontSize: 13, color: isGenerating ? "#86868b" : "#1d1d1f", resize: "none", height: 90, boxSizing: "border-box", outline: "none", lineHeight: 1.6, background: isGenerating ? "#f9f9fb" : "white" }}
                         disabled={isGenerating} />
                       {isGenerating && (
@@ -2315,8 +2300,13 @@ export default function GNIApp() {
                       )}
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                      <span style={{ fontSize: 11, color: "#aeaeb2" }}>Variables : <strong style={{ color: "#86868b" }}>{"{civilite} {nom}"}</strong> · <strong style={{ color: "#86868b" }}>{"{documents_manquants}"}</strong></span>
-                      <button onClick={() => generateMessage(tpl.id, tpl.delay)} disabled={isGenerating}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        {relanceMsgTab === "email"
+                          ? <span style={{ fontSize: 11, color: "#aeaeb2" }}>Variables : <strong style={{ color: "#86868b" }}>{"{civilite} {nom}"}</strong> · <strong style={{ color: "#86868b" }}>{"{documents_manquants}"}</strong></span>
+                          : <><span style={{ fontSize: 11, color: "#aeaeb2" }}>Variables : <strong style={{ color: "#86868b" }}>{"{civilite} {nom}"}</strong></span><span style={{ fontSize: 10, color: (tpl.smsMessage || "").length > 160 ? "#FF3B30" : "#aeaeb2" }}>{(tpl.smsMessage || "").length}/160 caractères</span></>
+                        }
+                      </div>
+                      <button onClick={() => generateMessage(tpl.id, tpl.delay, relanceMsgTab)} disabled={isGenerating}
                         style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 10, border: "none", background: isGenerating ? "#f2f2f7" : "linear-gradient(135deg,#6e40c9,#0071e3)", color: isGenerating ? "#aeaeb2" : "white", fontSize: 12, fontWeight: 600, cursor: isGenerating ? "default" : "pointer", boxShadow: isGenerating ? "none" : "0 2px 10px rgba(110,64,201,.3)", whiteSpace: "nowrap" }}>
                         {isGenerating ? <Loader size={12} /> : <Sparkles size={12} />}
                         {isGenerating ? "Génération…" : "Générer avec l'IA"}
@@ -2436,9 +2426,21 @@ export default function GNIApp() {
                   </div>
 
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .8, textTransform: "uppercase", marginBottom: 8 }}>Message</div>
+                    <div style={{ display: "flex", borderBottom: "1px solid #e5e5ea", marginBottom: 10 }}>
+                      {[{ key: "email", label: "Email", Icon: Mail }, { key: "sms", label: "SMS", Icon: MessageSquare }].map(tab => (
+                        <button key={tab.key} onClick={() => setProspectMsgTab(tab.key)}
+                          style={{ flex: 1, padding: "8px 0", border: "none", borderBottom: `2px solid ${prospectMsgTab === tab.key ? "#FF9F0A" : "transparent"}`, background: "none", color: prospectMsgTab === tab.key ? "#FF9F0A" : "#86868b", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, transition: "all .15s" }}>
+                          <tab.Icon size={13} /> {tab.label}
+                        </button>
+                      ))}
+                    </div>
                     <div style={{ position: "relative" }}>
-                      <textarea value={tpl.message} onChange={(e) => setProspectTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, message: e.target.value } : t))}
+                      <textarea
+                        value={prospectMsgTab === "sms" ? (tpl.smsMessage || "") : tpl.message}
+                        onChange={(e) => {
+                          const field = prospectMsgTab === "sms" ? "smsMessage" : "message";
+                          setProspectTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, [field]: e.target.value } : t));
+                        }}
                         style={{ width: "100%", padding: "13px 14px", borderRadius: 12, border: "1px solid #d1d1d6", fontSize: 13, color: generatingId === "p-" + tpl.id ? "#86868b" : "#1d1d1f", resize: "none", height: 90, boxSizing: "border-box", outline: "none", lineHeight: 1.6, background: generatingId === "p-" + tpl.id ? "#f9f9fb" : "white" }}
                         disabled={generatingId === "p-" + tpl.id} />
                       {generatingId === "p-" + tpl.id && (
@@ -2450,8 +2452,13 @@ export default function GNIApp() {
                       )}
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                      <span style={{ fontSize: 11, color: "#aeaeb2" }}>Variables : <strong style={{ color: "#86868b" }}>{"{civilite} {nom}"}</strong> · <strong style={{ color: "#86868b" }}>{"{documents_manquants}"}</strong></span>
-                      <button onClick={() => generateProspectMessage(tpl.id, tpl.delay)} disabled={generatingId === "p-" + tpl.id}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        {prospectMsgTab === "email"
+                          ? <span style={{ fontSize: 11, color: "#aeaeb2" }}>Variables : <strong style={{ color: "#86868b" }}>{"{civilite} {nom}"}</strong> · <strong style={{ color: "#86868b" }}>{"{documents_manquants}"}</strong></span>
+                          : <><span style={{ fontSize: 11, color: "#aeaeb2" }}>Variables : <strong style={{ color: "#86868b" }}>{"{civilite} {nom}"}</strong></span><span style={{ fontSize: 10, color: (tpl.smsMessage || "").length > 160 ? "#FF3B30" : "#aeaeb2" }}>{(tpl.smsMessage || "").length}/160 caractères</span></>
+                        }
+                      </div>
+                      <button onClick={() => generateProspectMessage(tpl.id, tpl.delay, prospectMsgTab)} disabled={generatingId === "p-" + tpl.id}
                         style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 10, border: "none", background: generatingId === "p-" + tpl.id ? "#f2f2f7" : "linear-gradient(135deg,#FF9F0A,#FF6723)", color: generatingId === "p-" + tpl.id ? "#aeaeb2" : "white", fontSize: 12, fontWeight: 600, cursor: generatingId === "p-" + tpl.id ? "default" : "pointer", boxShadow: generatingId === "p-" + tpl.id ? "none" : "0 2px 10px rgba(255,159,10,.3)", whiteSpace: "nowrap" }}>
                         {generatingId === "p-" + tpl.id ? <Loader size={12} /> : <Sparkles size={12} />}
                         {generatingId === "p-" + tpl.id ? "Génération…" : "Générer avec l'IA"}

@@ -7,7 +7,10 @@ export default async function handler(req, res) {
 
   // Auth check
   const secret = process.env.API_SECRET;
-  if (secret && req.headers["x-api-secret"] !== secret) return res.status(401).json({ error: "Unauthorized" });
+  const authHeader = req.headers.authorization;
+  const hasSecret = secret && (req.headers["x-api-secret"] === secret || req.query.secret === secret);
+  const hasJwt = authHeader && authHeader.startsWith("Bearer ");
+  if (!hasSecret && !hasJwt) return res.status(401).json({ error: "Unauthorized" });
 
   const { VAPI_API_KEY, VAPI_PHONE_NUMBER_ID, SUPABASE_URL, SUPABASE_SERVICE_KEY } = process.env;
 

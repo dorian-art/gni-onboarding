@@ -15,6 +15,20 @@ A la fin de chaque session ou quand une information importante emerge :
 - Mets a jour les preferences si elles changent dans Preferences.md
 - Mets a jour les infos utilisateurs dans Users.md
 
+## Task Dashboard
+
+Au debut de chaque session, lis `Memory/Tasks.json`. S'il y a des taches en attente :
+1. Lister les taches au user, triees par priorite (critical > high > medium > low)
+2. Proposer de traiter la tache de plus haute priorite
+3. Quand une tache est realisee, la marquer comme completee via l'API ou directement dans Tasks.json
+4. Logger l'activite dans Tasks.log
+
+Quand le user dit "fais mes taches" ou "traite le dashboard" :
+- Lire Tasks.json
+- Executer concretement le travail decrit (code, fix, deploiement, etc.)
+- Marquer comme termine
+- Passer a la suivante par ordre de priorite
+
 ## Regles generales
 
 - **Langue** : Communiquer en francais

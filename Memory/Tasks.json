@@ -1,1 +1,26 @@
-{"tasks":[],"completed":[]}
+{
+  "tasks": [
+    {
+      "id": "mmuu3rouc8t4",
+      "title": "verifier le bon fonctionnement du logiciel on boarding",
+      "description": "Faire tous les tests au maximum pour voir le bon déroulement des choses, les bugs, les affichages.",
+      "priority": "medium",
+      "status": "pending",
+      "createdAt": "2026-03-17T16:36:11.118Z",
+      "updatedAt": "2026-03-17T16:39:27.380Z"
+    }
+  ],
+  "completed": [
+    {
+      "id": "test001",
+      "title": "Ajouter un .gitignore propre au projet",
+      "description": "Creer un .gitignore qui exclut .env, .env.check, .vercel/, node_modules/, .claude/worktrees/",
+      "priority": "medium",
+      "status": "completed",
+      "createdAt": "2026-03-17T16:00:00Z",
+      "updatedAt": "2026-03-17T16:00:00Z",
+      "completedAt": "2026-03-17T16:45:00Z",
+      "completedBy": "claude"
+    }
+  ]
+}

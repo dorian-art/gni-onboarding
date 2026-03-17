@@ -1,8 +1,8 @@
 const { google } = require("googleapis");
 const { Readable } = require("stream");
 
-const SUPABASE_URL = "https://niueqiwxhljhouqsjqqx.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pdWVxaXd4aGxqaG91cXNqcXF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwODYzNzYsImV4cCI6MjA4ODY2MjM3Nn0.I1SqvRG3-boMOd2F9SW0yyZG5iFMAwjGHvsxadOOjg0";
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://niueqiwxhljhouqsjqqx.supabase.co";
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 const ALLOWED_FILE_URL_PREFIX = `${SUPABASE_URL}/storage/v1/object/public/`;
 
@@ -56,7 +56,10 @@ module.exports = async function handler(req, res) {
 
   // Auth check
   const secret = process.env.API_SECRET;
-  if (secret && req.headers["x-api-secret"] !== secret) return res.status(401).json({ error: "Unauthorized" });
+  const authHeader = req.headers.authorization;
+  const hasSecret = secret && (req.headers["x-api-secret"] === secret || req.query.secret === secret);
+  const hasJwt = authHeader && authHeader.startsWith("Bearer ");
+  if (!hasSecret && !hasJwt) return res.status(401).json({ error: "Unauthorized" });
 
   const { fileUrl, fileName, advisorId, clientName, folderId } = req.body;
   if (!fileUrl || !fileName || !advisorId || !clientName) {

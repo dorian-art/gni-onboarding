@@ -1,7 +1,7 @@
 const LOGO_URL = "https://gni-onboarding.vercel.app/logo-gni.png";
 
-const SUPABASE_URL = "https://niueqiwxhljhouqsjqqx.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pdWVxaXd4aGxqaG91cXNqcXF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwODYzNzYsImV4cCI6MjA4ODY2MjM3Nn0.I1SqvRG3-boMOd2F9SW0yyZG5iFMAwjGHvsxadOOjg0";
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://niueqiwxhljhouqsjqqx.supabase.co";
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 const ALLOWED_ORIGINS = [
   "https://gni-portail.vercel.app",
