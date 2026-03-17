@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+  .header { background: #1e293b; padding: 20px 32px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-size: 22px; font-weight: 600; }
+  .header .stats { font-size: 13px; color: #94a3b8; }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+
+  /* Add form */
+  .add-form { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid #334155; }
+  .add-form h2 { font-size: 15px; margin-bottom: 14px; color: #94a3b8; font-weight: 500; }
+  .form-row { display: flex; gap: 10px; margin-bottom: 10px; }
+  .form-row:last-child { margin-bottom: 0; }
+  input, textarea, select { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 14px; font-family: inherit; }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: #3b82f6; }
+  input[name="title"] { flex: 1; }
+  textarea { flex: 1; resize: vertical; min-height: 40px; }
+  select { min-width: 130px; }
+  .btn { padding: 10px 20px; border-radius: 8px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .btn-primary { background: #3b82f6; color: white; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-danger { background: #ef4444; color: white; }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-success { background: #22c55e; color: white; }
+  .btn-success:hover { background: #16a34a; }
+  .btn-ghost { background: transparent; color: #94a3b8; border: 1px solid #334155; }
+  .btn-ghost:hover { background: #1e293b; }
+
+  /* Filters */
+  .filters { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .filter-btn { padding: 6px 16px; border-radius: 20px; border: 1px solid #334155; background: transparent; color: #94a3b8; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+  .filter-btn.active { background: #3b82f6; border-color: #3b82f6; color: white; }
+  .filter-btn:hover:not(.active) { border-color: #64748b; color: #e2e8f0; }
+
+  /* Task list */
+  .task-list { display: flex; flex-direction: column; gap: 8px; }
+  .task { background: #1e293b; border-radius: 10px; padding: 16px 20px; border: 1px solid #334155; display: flex; align-items: flex-start; gap: 14px; transition: all 0.15s; }
+  .task:hover { border-color: #475569; }
+
+  .priority-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .priority-dot.critical { background: #ef4444; box-shadow: 0 0 8px #ef444466; }
+  .priority-dot.high { background: #f97316; }
+  .priority-dot.medium { background: #3b82f6; }
+  .priority-dot.low { background: #64748b; }
+
+  .task-content { flex: 1; min-width: 0; }
+  .task-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .task-desc { font-size: 13px; color: #64748b; margin-bottom: 6px; }
+  .task-meta { font-size: 11px; color: #475569; }
+
+  .task-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+  .priority-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; text-transform: uppercase; }
+  .priority-badge.critical { background: #ef444422; color: #ef4444; }
+  .priority-badge.high { background: #f9731622; color: #f97316; }
+  .priority-badge.medium { background: #3b82f622; color: #3b82f6; }
+  .priority-badge.low { background: #64748b22; color: #64748b; }
+
+  /* Edit mode */
+  .task.editing { border-color: #3b82f6; }
+  .edit-fields { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .edit-fields input, .edit-fields textarea, .edit-fields select { width: 100%; }
+  .edit-row { display: flex; gap: 8px; }
+
+  /* Completed section */
+  .completed-section { margin-top: 32px; }
+  .completed-section h2 { font-size: 15px; color: #475569; margin-bottom: 12px; cursor: pointer; }
+  .completed-section h2:hover { color: #64748b; }
+  .task.completed .task-title { text-decoration: line-through; color: #64748b; }
+
+  .empty { text-align: center; padding: 48px; color: #475569; font-size: 15px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Task Dashboard</h1>
+  <div class="stats" id="stats"></div>
+</div>
+
+<div class="container">
+  <div class="add-form">
+    <h2>Nouvelle tache</h2>
+    <div class="form-row">
+      <input type="text" name="title" id="newTitle" placeholder="Titre de la tache...">
+      <select id="newPriority">
+        <option value="critical">Critique</option>
+        <option value="high">Haute</option>
+        <option value="medium" selected>Moyenne</option>
+        <option value="low">Basse</option>
+      </select>
+      <button class="btn btn-primary" onclick="addTask()">Ajouter</button>
+    </div>
+    <div class="form-row">
+      <textarea id="newDesc" placeholder="Description (optionnel)..." rows="1"></textarea>
+    </div>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" data-filter="all">Toutes</button>
+    <button class="filter-btn" data-filter="critical">Critique</button>
+    <button class="filter-btn" data-filter="high">Haute</button>
+    <button class="filter-btn" data-filter="medium">Moyenne</button>
+    <button class="filter-btn" data-filter="low">Basse</button>
+  </div>
+
+  <div class="task-list" id="taskList"></div>
+
+  <div class="completed-section" id="completedSection" style="display:none">
+    <h2 id="completedToggle"></h2>
+    <div class="task-list" id="completedList" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+const API = '/api/tasks';
+let tasks = { tasks: [], completed: [] };
+let currentFilter = 'all';
+let editingId = null;
+let showCompleted = false;
+
+const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
+const PRIORITY_LABELS = { critical: 'Critique', high: 'Haute', medium: 'Moyenne', low: 'Basse' };
+
+async function fetchTasks() {
+  const res = await fetch(API);
+  tasks = await res.json();
+  render();
+}
+
+function render() {
+  const filtered = tasks.tasks
+    .filter(t => currentFilter === 'all' || t.priority === currentFilter)
+    .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+
+  const list = document.getElementById('taskList');
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty">Aucune tache' + (currentFilter !== 'all' ? ' avec cette priorite' : '') + '</div>';
+  } else {
+    list.innerHTML = filtered.map(t => {
+      if (editingId === t.id) return renderEditTask(t);
+      return renderTask(t);
+    }).join('');
+  }
+
+  // Stats
+  const total = tasks.tasks.length;
+  const done = tasks.completed.length;
+  const critical = tasks.tasks.filter(t => t.priority === 'critical').length;
+  document.getElementById('stats').textContent =
+    `${total} en cours | ${done} terminees` + (critical ? ` | ${critical} critiques` : '');
+
+  // Completed
+  const cs = document.getElementById('completedSection');
+  const cl = document.getElementById('completedList');
+  const ct = document.getElementById('completedToggle');
+  if (tasks.completed.length > 0) {
+    cs.style.display = 'block';
+    ct.textContent = `${showCompleted ? '▼' : '▶'} Terminees (${tasks.completed.length})`;
+    cl.style.display = showCompleted ? 'flex' : 'none';
+    cl.innerHTML = tasks.completed.slice().reverse().map(t => `
+      <div class="task completed">
+        <div class="priority-dot ${t.priority}"></div>
+        <div class="task-content">
+          <div class="task-title">${esc(t.title)}</div>
+          ${t.description ? `<div class="task-desc">${esc(t.description)}</div>` : ''}
+          <div class="task-meta">Termine le ${fmtDate(t.completedAt)}</div>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    cs.style.display = 'none';
+  }
+}
+
+function renderTask(t) {
+  return `
+    <div class="task">
+      <div class="priority-dot ${t.priority}"></div>
+      <div class="task-content">
+        <div class="task-title">${esc(t.title)} <span class="priority-badge ${t.priority}">${PRIORITY_LABELS[t.priority]}</span></div>
+        ${t.description ? `<div class="task-desc">${esc(t.description)}</div>` : ''}
+        <div class="task-meta">Cree le ${fmtDate(t.createdAt)}</div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-sm btn-success" onclick="completeTask('${t.id}')" title="Terminer">&#10003;</button>
+        <button class="btn btn-sm btn-ghost" onclick="startEdit('${t.id}')" title="Modifier">&#9998;</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteTask('${t.id}')" title="Supprimer">&#10005;</button>
+      </div>
+    </div>`;
+}
+
+function renderEditTask(t) {
+  return `
+    <div class="task editing">
+      <div class="priority-dot ${t.priority}"></div>
+      <div class="edit-fields">
+        <input type="text" id="editTitle" value="${esc(t.title)}">
+        <textarea id="editDesc" rows="2">${esc(t.description)}</textarea>
+        <div class="edit-row">
+          <select id="editPriority">
+            ${['critical','high','medium','low'].map(p => `<option value="${p}" ${t.priority===p?'selected':''}>${PRIORITY_LABELS[p]}</option>`).join('')}
+          </select>
+          <button class="btn btn-sm btn-primary" onclick="saveEdit('${t.id}')">Sauver</button>
+          <button class="btn btn-sm btn-ghost" onclick="cancelEdit()">Annuler</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function addTask() {
+  const title = document.getElementById('newTitle').value.trim();
+  if (!title) return;
+  const priority = document.getElementById('newPriority').value;
+  const description = document.getElementById('newDesc').value.trim();
+
+  await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, priority, description })
+  });
+
+  document.getElementById('newTitle').value = '';
+  document.getElementById('newDesc').value = '';
+  document.getElementById('newPriority').value = 'medium';
+  await fetchTasks();
+}
+
+async function deleteTask(id) {
+  if (!confirm('Supprimer cette tache ?')) return;
+  await fetch(`${API}/${id}`, { method: 'DELETE' });
+  await fetchTasks();
+}
+
+async function completeTask(id) {
+  await fetch(`${API}/${id}/complete`, { method: 'POST' });
+  await fetchTasks();
+}
+
+function startEdit(id) {
+  editingId = id;
+  render();
+}
+
+function cancelEdit() {
+  editingId = null;
+  render();
+}
+
+async function saveEdit(id) {
+  const title = document.getElementById('editTitle').value.trim();
+  const description = document.getElementById('editDesc').value.trim();
+  const priority = document.getElementById('editPriority').value;
+
+  await fetch(`${API}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, description, priority })
+  });
+
+  editingId = null;
+  await fetchTasks();
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function fmtDate(iso) { return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+
+// Filters
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    render();
+  });
+});
+
+// Toggle completed
+document.getElementById('completedToggle').addEventListener('click', () => {
+  showCompleted = !showCompleted;
+  render();
+});
+
+// Enter key
+document.getElementById('newTitle').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addTask();
+});
+
+fetchTasks();
+</script>
+</body>
+</html>
