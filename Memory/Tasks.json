@@ -1,1 +1,15 @@
-{"tasks":[],"completed":[]}
+{
+  "tasks": [],
+  "completed": [
+    {
+      "id": "mmuroln8bd2x",
+      "title": "Tester le dashboard",
+      "description": "",
+      "priority": "high",
+      "status": "completed",
+      "createdAt": "2026-03-17T15:28:24.212Z",
+      "updatedAt": "2026-03-17T15:28:24.214Z",
+      "completedAt": "2026-03-17T15:28:35.789Z"
+    }
+  ]
+}
