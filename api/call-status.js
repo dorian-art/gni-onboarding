@@ -3,6 +3,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  // Auth check
+  const secret = process.env.API_SECRET;
+  if (secret && req.headers["x-api-secret"] !== secret) return res.status(401).json({ error: "Unauthorized" });
+
   const { SUPABASE_URL, SUPABASE_SERVICE_KEY } = process.env;
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {

@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     try {
       // Update voice_calls record
       const updateRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/voice_calls?vapi_call_id=eq.${callId}`,
+        `${SUPABASE_URL}/rest/v1/voice_calls?vapi_call_id=eq.${encodeURIComponent(callId)}`,
         {
           method: "PATCH",
           headers: {
@@ -65,7 +65,7 @@ export default async function handler(req, res) {
     if (callId && status) {
       try {
         await fetch(
-          `${SUPABASE_URL}/rest/v1/voice_calls?vapi_call_id=eq.${callId}`,
+          `${SUPABASE_URL}/rest/v1/voice_calls?vapi_call_id=eq.${encodeURIComponent(callId)}`,
           {
             method: "PATCH",
             headers: {

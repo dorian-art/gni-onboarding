@@ -5,6 +5,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  // Auth check
+  const secret = process.env.API_SECRET;
+  if (secret && req.headers["x-api-secret"] !== secret) return res.status(401).json({ error: "Unauthorized" });
+
   const { VAPI_API_KEY, VAPI_PHONE_NUMBER_ID, SUPABASE_URL, SUPABASE_SERVICE_KEY } = process.env;
 
   if (!VAPI_API_KEY || !VAPI_PHONE_NUMBER_ID) {
@@ -17,12 +21,18 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "phone and clientName are required" });
   }
 
+  // Validate phone format
+  const cleanPhone = phone.replace(/\s/g, "");
+  if (!/^\+\d{10,15}$/.test(cleanPhone)) {
+    return res.status(400).json({ error: "Invalid phone number" });
+  }
+
   // Fetch previous call history from Supabase for memory
   let previousCalls = [];
   if (SUPABASE_URL && SUPABASE_SERVICE_KEY && clientId) {
     try {
       const historyRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/voice_calls?client_id=eq.${clientId}&status=eq.ended&order=created_at.desc&limit=5`,
+        `${SUPABASE_URL}/rest/v1/voice_calls?client_id=eq.${encodeURIComponent(clientId)}&status=eq.ended&order=created_at.desc&limit=5`,
         {
           headers: {
             apikey: SUPABASE_SERVICE_KEY,
@@ -77,7 +87,7 @@ INSTRUCTIONS :
       },
       body: JSON.stringify({
         phoneNumberId: VAPI_PHONE_NUMBER_ID,
-        assistantId: "2a4b1d9b-c76a-499d-9044-a75ad9e519f4",
+        assistantId: process.env.VAPI_ASSISTANT_ID || "2a4b1d9b-c76a-499d-9044-a75ad9e519f4",
         assistantOverrides: {
           variableValues: {
             systemPrompt: systemPrompt,
@@ -85,7 +95,7 @@ INSTRUCTIONS :
           firstMessage: `Bonjour ${civility || ""} ${contact || ""}. Je suis l'assistant du Groupe National de l'Immobilier. Comment allez-vous ?`,
         },
         customer: {
-          number: phone,
+          number: cleanPhone,
         },
       }),
     });
@@ -93,7 +103,7 @@ INSTRUCTIONS :
     if (!vapiRes.ok) {
       const errBody = await vapiRes.text();
       console.error("Vapi error:", errBody);
-      return res.status(vapiRes.status).json({ error: "Vapi call failed", details: errBody });
+      return res.status(vapiRes.status).json({ error: "Vapi call failed" });
     }
 
     const vapiData = await vapiRes.json();
@@ -112,7 +122,7 @@ INSTRUCTIONS :
             client_id: clientId || clientName,
             client_type: clientType || "client",
             vapi_call_id: vapiData.id,
-            phone,
+            phone: cleanPhone,
             status: "queued",
             missing_docs: missingDocs || [],
             initiated_by: req.body.initiatedBy || "unknown",
