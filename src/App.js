@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createClient } from "@supabase/supabase-js";
 import {
   LayoutDashboard, FolderOpen, Bell, Users, Building2, MapPin, Settings,
   Monitor, Mail, Receipt, Phone, UserCircle, Image, FileText,
@@ -18,40 +19,33 @@ function useIsMobile(bp = 768) {
 const SUPABASE_URL = "https://niueqiwxhljhouqsjqqx.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pdWVxaXd4aGxqaG91cXNqcXF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwODYzNzYsImV4cCI6MjA4ODY2MjM3Nn0.I1SqvRG3-boMOd2F9SW0yyZG5iFMAwjGHvsxadOOjg0";
 
-const sb = {
-  from: (table) => ({
-    select: (cols = "*") => fetch(`${SUPABASE_URL}/rest/v1/${table}?select=${cols}&order=created_at.asc`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }).then(r => r.json()),
-    insert: (data) => fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: "POST", headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify(data) }).then(r => r.json()),
-    update: (data, id) => fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method: "PATCH", headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify(data) }).then(r => { if (!r.ok) return r.text().then(t => { throw new Error(t); }); return r; }),
-    upsert: async (data) => {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-        method: "POST",
-        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
-        body: JSON.stringify(data)
-      });
-      return res;
-    },
-    delete: (id) => fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method: "DELETE", headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Prefer": "return=minimal" } }),
-  }),
-};
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── Static data ──────────────────────────────────────────────────────────────
 
 const API_SECRET = process.env.REACT_APP_API_SECRET || "";
-const apiHeaders = (extra = {}) => ({ "Content-Type": "application/json", ...(API_SECRET ? { "x-api-secret": API_SECRET } : {}), ...extra });
+const apiHeaders = async (extra = {}) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  return {
+    "Content-Type": "application/json",
+    ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+    ...(API_SECRET ? { "x-api-secret": API_SECRET } : {}),
+    ...extra
+  };
+};
 
 const PORTAIL_URL = "https://gni-portail.vercel.app";
 
 const ADVISORS = ["Sandra", "Loïc", "Heliot", "Marie"];
 
-// Compte admin initial
-const INIT_ADMIN = { id: "admin", firstName: "Dorian", lastName: "Admin", email: "dorian@gni.com", password: "Gnimmo66", phone: "" };
+// Compte admin initial (mot de passe géré par Supabase Auth)
+const INIT_ADMIN = { id: "admin", firstName: "Dorian", lastName: "Admin", email: "dorian@gnimmo.com", phone: "" };
 
 const INIT_TEAM = [
-  { id: "sandra",  firstName: "Sandra",  lastName: "Usai",      email: "sandrausai@gnimmo.com",  phone: "+33 767029302", password: "Sandra2026!",  disabled: false, relancesEnabled: true, prospectRelancesEnabled: true, googleDriveFolderId: "" },
-  { id: "loic",    firstName: "Loïc",    lastName: "Fauchet",   email: "loic@gnimmo.com",        phone: "+33 629795550", password: "Loic2026!",    disabled: false, relancesEnabled: true, prospectRelancesEnabled: true, googleDriveFolderId: "" },
-  { id: "heliot",  firstName: "Heliot",  lastName: "Derc",      email: "heliot@gnimmo.com",      phone: "+33 782012400", password: "Heliot2026!", disabled: false, relancesEnabled: true, prospectRelancesEnabled: true, googleDriveFolderId: "" },
-  { id: "marie",   firstName: "Marie",   lastName: "Orfeuil",   email: "marie@gnimmo.com",       phone: "+33 671582109", password: "Marie2026!",   disabled: false, relancesEnabled: true, prospectRelancesEnabled: true, googleDriveFolderId: "" },
+  { id: "sandra",  firstName: "Sandra",  lastName: "Usai",      email: "sandrausai@gnimmo.com",  phone: "+33 767029302", disabled: false, relancesEnabled: true, prospectRelancesEnabled: true, googleDriveFolderId: "" },
+  { id: "loic",    firstName: "Loïc",    lastName: "Fauchet",   email: "loic@gnimmo.com",        phone: "+33 629795550", disabled: false, relancesEnabled: true, prospectRelancesEnabled: true, googleDriveFolderId: "" },
+  { id: "heliot",  firstName: "Heliot",  lastName: "Derc",      email: "heliot@gnimmo.com",      phone: "+33 782012400", disabled: false, relancesEnabled: true, prospectRelancesEnabled: true, googleDriveFolderId: "" },
+  { id: "marie",   firstName: "Marie",   lastName: "Orfeuil",   email: "marie@gnimmo.com",       phone: "+33 671582109", disabled: false, relancesEnabled: true, prospectRelancesEnabled: true, googleDriveFolderId: "" },
 ];
 
 const DOCUMENT_LIST = [
@@ -302,7 +296,8 @@ const LOGO_GNI = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABTgAAAIPCAYAAABX
 export default function GNIApp() {
   const isMobile = useIsMobile();
   const [menuOpen,          setMenuOpen]          = useState(false);
-  const [currentUser,       setCurrentUser]       = useState(() => { try { const s = localStorage.getItem("gni_session"); return s ? JSON.parse(s) : null; } catch { return null; } });
+  const [currentUser,       setCurrentUser]       = useState(null);
+  const [authLoading,       setAuthLoading]       = useState(true);
   const [loginEmail,        setLoginEmail]        = useState("");
   const [loginPassword,     setLoginPassword]     = useState("");
   const [loginError,        setLoginError]        = useState("");
@@ -345,11 +340,11 @@ export default function GNIApp() {
       if (!s) return INIT_TEAM;
       const saved = JSON.parse(s);
       // Merge: keep local customizations (photo, googleDriveFolderId, disabled, relancesEnabled)
-      // but always use INIT_TEAM for identity & credentials (email, password, firstName, lastName, phone)
+      // but always use INIT_TEAM for identity (email, firstName, lastName, phone)
       return INIT_TEAM.map(init => {
         const local = saved.find(m => m.id === init.id);
         if (!local) return init;
-        return { ...local, email: init.email, password: init.password, firstName: init.firstName, lastName: init.lastName, phone: init.phone };
+        return { ...local, email: init.email, firstName: init.firstName, lastName: init.lastName, phone: init.phone };
       });
     } catch { return INIT_TEAM; }
   });
@@ -366,6 +361,25 @@ export default function GNIApp() {
   const [, setActiveCallId] = useState(null);
   const [callTranscripts,  setCallTranscripts]   = useState({});
 
+  // ── Restauration session Supabase Auth ──
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        const meta = session.user.user_metadata;
+        setCurrentUser({ role: meta.role || "advisor", name: meta.name || "", memberId: meta.advisor_id });
+      }
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") { setCurrentUser(null); }
+      if (session) {
+        const meta = session.user.user_metadata;
+        setCurrentUser({ role: meta.role || "advisor", name: meta.name || "", memberId: meta.advisor_id });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   // ── Persistance localStorage ──────────────────────────────────────────────
   useEffect(() => { localStorage.setItem("gni_team", JSON.stringify(team)); }, [team]);
   useEffect(() => { localStorage.setItem("gni_admin", JSON.stringify(adminProfile)); }, [adminProfile]);
@@ -377,9 +391,9 @@ export default function GNIApp() {
     if (!member) return;
     (async () => {
       try {
-        const r = await fetch(`/api/google-status?advisorId=${encodeURIComponent(member.id)}`, { headers: apiHeaders() });
+        const r = await fetch(`/api/google-status?advisorId=${encodeURIComponent(member.id)}`, { headers: await apiHeaders() });
         const d = await r.json();
-        setProfileDriveStatus(d.connected ? { connected: true, email: d.email || "" } : { connected: false, email: "" });
+        setProfileDriveStatus(d.connected ? { connected: true, email: d.email || "", gmailEnabled: !!d.gmailEnabled } : { connected: false, email: "", gmailEnabled: false });
       } catch (e) { console.error("Drive status check:", e); }
     })();
   }, [view, currentUser?.role, currentUser?.name]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -398,7 +412,7 @@ export default function GNIApp() {
     clearTimeout(prospectsSyncRef.current);
     prospectsSyncRef.current = setTimeout(() => {
       prospects.forEach(p => {
-        sb.from("prospects").upsert(prospectToRow(p)).catch(e => console.error("Prospect sync error:", e));
+        supabase.from("prospects").upsert(prospectToRow(p)).then(({ error: e }) => { if (e) console.error("Prospect sync error:", e); });
       });
     }, 1500);
     return () => clearTimeout(prospectsSyncRef.current);
@@ -439,8 +453,8 @@ export default function GNIApp() {
     const loadData = async () => {
       setDbLoading(true);
       try {
-        const data = await sb.from("clients").select("*");
-        console.log("Supabase data:", data);
+        const { data, error: loadErr } = await supabase.from("clients").select("*").order("created_at", { ascending: true });
+        if (loadErr) console.error("Supabase load error:", loadErr);
 
         if (Array.isArray(data) && data.length > 0) {
           const converted = data.map(r => {
@@ -464,7 +478,7 @@ export default function GNIApp() {
             // Si le statut a changé, on le persiste dans Supabase
             if (newStatus !== (r.status || "pending")) {
               c.status = newStatus;
-              sb.from("clients").update({ status: newStatus }, c.id).catch(e => console.error("Auto-status update error:", e));
+              supabase.from("clients").update({ status: newStatus }).eq("id", c.id).then(({ error: e }) => { if (e) console.error("Auto-status update error:", e); });
             } else {
               c.status = newStatus;
             }
@@ -488,8 +502,8 @@ export default function GNIApp() {
             communication:   c.comms || {},
             relance_history: c.relanceHistory || [],
           }));
-          const result = await sb.from("clients").upsert(mockData);
-          console.log("Insert mock result:", result);
+          const { error: upsertErr } = await supabase.from("clients").upsert(mockData);
+          if (upsertErr) console.error("Insert mock error:", upsertErr);
           setClients(mockData.map(c => ({
             id:             c.id,
             name:           c.name,
@@ -513,7 +527,7 @@ export default function GNIApp() {
       }
       // ── Chargement prospects depuis Supabase ──
       try {
-        const pData = await sb.from("prospects").select("*");
+        const { data: pData } = await supabase.from("prospects").select("*").order("created_at", { ascending: true });
         if (Array.isArray(pData) && pData.length > 0) {
           const pLoaded = pData.map(rowToProspect);
           setProspects(pLoaded);
@@ -521,7 +535,7 @@ export default function GNIApp() {
         } else {
           // Première fois : insérer les mock prospects
           const mockRows = MOCK_PROSPECTS.map(prospectToRow);
-          await sb.from("prospects").upsert(mockRows);
+          await supabase.from("prospects").upsert(mockRows);
           setProspects(MOCK_PROSPECTS);
         }
       } catch (e) {
@@ -530,7 +544,7 @@ export default function GNIApp() {
       }
       // ── Chargement dernières connexions conseillers ──
       try {
-        const logins = await fetch(`${SUPABASE_URL}/rest/v1/advisor_logins?select=*`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }).then(r => r.json());
+        const { data: logins } = await supabase.from("advisor_logins").select("*");
         if (Array.isArray(logins) && logins.length > 0) {
           setTeam(prev => {
             const updated = prev.map(m => {
@@ -549,7 +563,7 @@ export default function GNIApp() {
     const interval = setInterval(async () => {
       if (skipRefreshRef.current) return;
       try {
-        const data = await sb.from("clients").select("*");
+        const { data } = await supabase.from("clients").select("*").order("created_at", { ascending: true });
         if (Array.isArray(data) && data.length > 0) {
           const converted = data.map(r => {
             const c = {
@@ -578,7 +592,7 @@ export default function GNIApp() {
       } catch(e) { console.error("Refresh error:", e); }
       // Refresh prospects + auto-sync to Drive
       try {
-        const pData = await sb.from("prospects").select("*");
+        const { data: pData } = await supabase.from("prospects").select("*").order("created_at", { ascending: true });
         if (Array.isArray(pData) && pData.length > 0) {
           const pConverted = pData.map(rowToProspect);
           setProspects(pConverted);
@@ -587,7 +601,7 @@ export default function GNIApp() {
       } catch(e) { console.error("Prospect refresh error:", e); }
       // Refresh advisor logins
       try {
-        const logins = await fetch(`${SUPABASE_URL}/rest/v1/advisor_logins?select=*`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }).then(r => r.json());
+        const { data: logins } = await supabase.from("advisor_logins").select("*");
         if (Array.isArray(logins) && logins.length > 0) {
           setTeam(prev => prev.map(m => {
             const login = logins.find(l => l.id === m.id);
@@ -636,22 +650,22 @@ export default function GNIApp() {
       // Try with new columns first
       const full = { ...base, civility: client.civility || "", contact_first_name: client.contactFirstName || "", contact: client.contact || "" };
       console.log("Saving client:", full);
-      const res = await sb.from("clients").upsert(full);
-      if (res && res.status && res.status >= 400) {
+      const { error: upsErr } = await supabase.from("clients").upsert(full);
+      if (upsErr) {
         // Retry without new columns if they don't exist yet
-        console.warn("Retrying save without new columns...");
-        await sb.from("clients").upsert(base);
+        console.warn("Retrying save without new columns...", upsErr);
+        await supabase.from("clients").upsert(base);
       }
     } catch (e) {
       console.error("Save error:", e);
-      try { await sb.from("clients").upsert({ id: client.id, name: client.name, email: client.email || "", phone: client.phone || "", advisor: client.advisor, status: client.status, documents: client.docs || {}, informations: client.infos || {}, communication: client.comms || {}, relance_history: client.relanceHistory || [] }); } catch(e2) { console.error("Fallback save error:", e2); }
+      try { await supabase.from("clients").upsert({ id: client.id, name: client.name, email: client.email || "", phone: client.phone || "", advisor: client.advisor, status: client.status, documents: client.docs || {}, informations: client.infos || {}, communication: client.comms || {}, relance_history: client.relanceHistory || [] }); } catch(e2) { console.error("Fallback save error:", e2); }
     }
     setTimeout(() => { skipRefreshRef.current = false; }, 20000);
   };
 
   const addClientToDb = async (client) => {
     try {
-      await sb.from("clients").insert({
+      await supabase.from("clients").insert({
         id:             client.id,
         name:           client.name,
         civility:       client.civility || "",
@@ -693,7 +707,7 @@ export default function GNIApp() {
       try {
         const res = await fetch("/api/upload-drive", {
           method: "POST",
-          headers: apiHeaders(),
+          headers: await apiHeaders(),
           body: JSON.stringify({ fileUrl: file.url, fileName: file.fileName, advisorId: advisor.id, clientName: client.name, folderId: advisor.googleDriveFolderId || "" }),
         });
         if (res.ok) {
@@ -732,7 +746,7 @@ export default function GNIApp() {
       try {
         const res = await fetch("/api/upload-drive", {
           method: "POST",
-          headers: apiHeaders(),
+          headers: await apiHeaders(),
           body: JSON.stringify({ fileUrl: file.url, fileName: file.fileName, advisorId: advisor.id, clientName: prospect.name, folderId: advisor.googleDriveFolderId || "" }),
         });
         if (res.ok) {
@@ -774,10 +788,12 @@ export default function GNIApp() {
 
     if (channel === "Email" && prospect.email) {
       try {
+        const advisorMember = team.find(m => m.firstName === (prospect.advisor || currentUser.name));
+        const advisorId = advisorMember?.id || currentUser.memberId;
         const res = await fetch("/api/send-email", {
           method: "POST",
-          headers: apiHeaders(),
-          body: JSON.stringify({ to: prospect.email, clientName: prospect.name, message, portalLink }),
+          headers: await apiHeaders(),
+          body: JSON.stringify({ advisorId, to: prospect.email, clientName: prospect.name, message, portalLink }),
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -796,7 +812,7 @@ export default function GNIApp() {
         const smsBody = `Bonjour ${civNom}, votre dossier GNI est incomplet (${missingCount} élément${missingCount > 1 ? "s" : ""} manquant${missingCount > 1 ? "s" : ""}). Contactez-nous pour finaliser votre adhésion.`;
         const res = await fetch("/api/send-sms", {
           method: "POST",
-          headers: apiHeaders(),
+          headers: await apiHeaders(),
           body: JSON.stringify({ to: prospect.phone, message: smsBody }),
         });
         if (!res.ok) {
@@ -819,10 +835,10 @@ export default function GNIApp() {
 
   // ── Sauvegarde prospect vers Supabase ──
   const saveProspectToSupabase = async (prospect) => {
-    try { await sb.from("prospects").upsert(prospectToRow(prospect)); } catch (e) { console.error("Prospect save error:", e); }
+    try { await supabase.from("prospects").upsert(prospectToRow(prospect)); } catch (e) { console.error("Prospect save error:", e); }
   };
   const deleteProspectFromSupabase = async (id) => {
-    try { await sb.from("prospects").delete(id); } catch (e) { console.error("Prospect delete error:", e); }
+    try { await supabase.from("prospects").delete().eq("id", id); } catch (e) { console.error("Prospect delete error:", e); }
   };
 
   const addProspect = () => {
@@ -874,10 +890,12 @@ export default function GNIApp() {
     // Actually send the email/SMS
     if (channel === "Email" && client.email) {
       try {
+        const advisorMember = team.find(m => m.firstName === (client.advisor || currentUser.name));
+        const advisorId = advisorMember?.id || currentUser.memberId;
         const res = await fetch("/api/send-email", {
           method: "POST",
-          headers: apiHeaders(),
-          body: JSON.stringify({ to: client.email, clientName: client.name, message, portalLink }),
+          headers: await apiHeaders(),
+          body: JSON.stringify({ advisorId, to: client.email, clientName: client.name, message, portalLink }),
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -896,7 +914,7 @@ export default function GNIApp() {
         const smsBody = `Bonjour ${civNom}, votre dossier GNI est incomplet (${missingCount} élément${missingCount > 1 ? "s" : ""} manquant${missingCount > 1 ? "s" : ""}). Complétez-le ici : https://gni-portail.vercel.app?id=${client.id}`;
         const res = await fetch("/api/send-sms", {
           method: "POST",
-          headers: apiHeaders(),
+          headers: await apiHeaders(),
           body: JSON.stringify({ to: client.phone, message: smsBody }),
         });
         if (!res.ok) {
@@ -942,7 +960,7 @@ export default function GNIApp() {
     try {
       const res = await fetch("/api/voice-call", {
         method: "POST",
-        headers: apiHeaders(),
+        headers: await apiHeaders(),
         body: JSON.stringify({
           phone: entity.phone,
           clientName: entity.name,
@@ -990,7 +1008,7 @@ export default function GNIApp() {
       // Poll for call status
       const pollInterval = setInterval(async () => {
         try {
-          const statusRes = await fetch(`/api/call-status?callId=${encodeURIComponent(callId)}`, { headers: apiHeaders() });
+          const statusRes = await fetch(`/api/call-status?callId=${encodeURIComponent(callId)}`, { headers: await apiHeaders() });
           if (!statusRes.ok) return;
           const statusData = await statusRes.json();
 
@@ -1040,36 +1058,47 @@ export default function GNIApp() {
     }
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setLoginError("");
     const email = loginEmail.trim().toLowerCase();
-    // Admin check
-    if (email === adminProfile.email.toLowerCase()) {
-      if (loginPassword === adminProfile.password) {
-        setCurrentUser({ role: "admin", name: adminProfile.firstName });
-        localStorage.setItem("gni_session", JSON.stringify({ role: "admin", name: adminProfile.firstName }));
-        setView("dashboard");
-      } else {
-        setLoginError("Mot de passe incorrect.");
-      }
+    if (!email || !loginPassword) { setLoginError("Veuillez remplir tous les champs."); return; }
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: loginPassword });
+    if (error) {
+      if (error.message.includes("Invalid login")) setLoginError("E-mail ou mot de passe incorrect.");
+      else setLoginError(error.message);
       return;
     }
-    // Advisor check
-    const member = team.find((m) => m.email.toLowerCase() === email);
-    if (!member) { setLoginError("Aucun compte trouvé avec cet e-mail."); return; }
-    if (member.disabled) { setLoginError("Votre accès a été désactivé. Contactez l'administrateur."); return; }
-    if (loginPassword !== member.password) { setLoginError("Mot de passe incorrect."); return; }
-    const session = { role: "advisor", name: member.firstName, memberId: member.id };
+
+    const meta = data.user.user_metadata;
+    const role = meta.role || "advisor";
+    const name = meta.name || email.split("@")[0];
+    const advisorId = meta.advisor_id;
+
+    // Check if advisor is disabled
+    if (role === "advisor") {
+      const member = team.find(m => m.id === advisorId);
+      if (member?.disabled) {
+        await supabase.auth.signOut();
+        setLoginError("Votre accès a été désactivé. Contactez l'administrateur.");
+        return;
+      }
+    }
+
+    const session = { role, name, memberId: advisorId };
     setCurrentUser(session);
     localStorage.setItem("gni_session", JSON.stringify(session));
+
     // Enregistrer la dernière connexion dans Supabase
-    const now = new Date().toISOString();
-    sb.from("advisor_logins").upsert({ id: member.id, last_login: now });
-    setTeam(prev => {
-      const updated = prev.map(m => m.id === member.id ? { ...m, lastLogin: now } : m);
-      localStorage.setItem("gni_team", JSON.stringify(updated));
-      return updated;
-    });
+    if (role === "advisor" && advisorId) {
+      const now = new Date().toISOString();
+      supabase.from("advisor_logins").upsert({ id: advisorId, last_login: now });
+      setTeam(prev => {
+        const updated = prev.map(m => m.id === advisorId ? { ...m, lastLogin: now } : m);
+        localStorage.setItem("gni_team", JSON.stringify(updated));
+        return updated;
+      });
+    }
     setView("dashboard");
   };
 
@@ -1103,12 +1132,12 @@ export default function GNIApp() {
     setGeneratingId(tplId);
     const isSms = channel === "sms";
     const prompt = isSms
-      ? `Génère un SMS de relance très court (max 140 caractères) pour le réseau "Groupe National de l'Immobilier" (GNI). C'est la relance J+${delay} pour une agence qui n'a pas transmis ses documents. Commence par "Bonjour {civilite} {nom},". Sois ultra-concis. Pas de liste de documents (utilise le lien). Pas de signature. Réponds UNIQUEMENT avec le texte du SMS.`
+      ? `Génère un SMS de relance très court (max 140 caractères) pour le réseau "Groupe National de l'Immobilier" (GNI). C'est la relance J+${delay} pour une agence qui n'a pas transmis ses documents. Commence par "Bonjour {civilite} {nom},". Sois ultra-concis. Pas de liste de documents. Pas de signature. Réponds UNIQUEMENT avec le texte du SMS.`
       : `Génère un message de relance professionnel et chaleureux pour un réseau immobilier appelé "Groupe National de l'Immobilier" (GNI). Ce message est la relance J+${delay} envoyée à une agence immobilière (client) qui n'a pas encore transmis tous ses documents d'adhésion. Commence par "Bonjour {civilite} {nom}," (utiliser exactement ces variables). Inclus la variable {documents_manquants} dans le message pour lister les pièces manquantes (écris exactement {documents_manquants} tel quel, il sera remplacé automatiquement). Sois bref (3-4 phrases), professionnel et chaleureux. Mentionne le délai de ${delay} jours. Propose de l'aide. Pas de signature. Réponds UNIQUEMENT avec le texte du message.`;
     try {
       const res = await fetch("/api/generate-message", {
         method: "POST",
-        headers: apiHeaders(),
+        headers: await apiHeaders(),
         body: JSON.stringify({ prompt }),
       });
       const data = await res.json();
@@ -1130,7 +1159,7 @@ export default function GNIApp() {
     try {
       const res = await fetch("/api/generate-message", {
         method: "POST",
-        headers: apiHeaders(),
+        headers: await apiHeaders(),
         body: JSON.stringify({ prompt }),
       });
       const data = await res.json();
@@ -1186,6 +1215,7 @@ export default function GNIApp() {
     ...(currentUser?.role === "admin" ? [
       { id: "relances", Icon: Bell,  label: "Relances" },
       { id: "team",     Icon: Users, label: "Équipe" },
+      { id: "profile",  Icon: UserCircle, label: "Mon profil" },
     ] : [
       { id: "profile",  Icon: UserCircle, label: "Mon profil" },
     ]),
@@ -1203,6 +1233,15 @@ export default function GNIApp() {
           </div>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
+      </div>
+    );
+  }
+
+  // ── LOADING AUTH ──
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f7" }}>
+        <Loader size={28} className="spin" color="#0071e3" />
       </div>
     );
   }
@@ -1262,7 +1301,7 @@ export default function GNIApp() {
 
           <p style={{ fontSize: 11, color: "#aeaeb2", textAlign: "center", marginTop: 20, marginBottom: 0, lineHeight: 1.6 }}>
             Problème de connexion ? Contactez<br />
-            <a href="mailto:dorian@gni-reseau.fr" style={{ color: "#0071e3" }}>dorian@gni-reseau.fr</a>
+            <a href="mailto:dorian@gnimmo.com" style={{ color: "#0071e3" }}>dorian@gnimmo.com</a>
           </p>
         </div>
       </div>
@@ -1324,7 +1363,7 @@ export default function GNIApp() {
                 {currentUser.role === "admin" ? <Crown size={14} color="#FF9F0A" /> : <User size={14} color="#0071e3" />}
                 {currentUser.name}
               </div>
-              <button onClick={() => { setCurrentUser(null); localStorage.removeItem("gni_session"); setMenuOpen(false); }} style={{ marginTop: 10, fontSize: 13, color: "#FF3B30", background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
+              <button onClick={() => { supabase.auth.signOut(); localStorage.removeItem("gni_session"); setMenuOpen(false); }} style={{ marginTop: 10, fontSize: 13, color: "#FF3B30", background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
                 <LogOut size={13} /> Déconnexion
               </button>
             </div>
@@ -1351,7 +1390,7 @@ export default function GNIApp() {
               {currentUser.role === "admin" ? <Crown size={13} color="#FF9F0A" /> : <User size={13} color="#0071e3" />}
               {currentUser.name}
             </div>
-            <button onClick={() => { setCurrentUser(null); localStorage.removeItem("gni_session"); }} style={{ marginTop: 10, width: "100%", fontSize: 12, color: "#FF3B30", background: "rgba(255,59,48,.06)", border: "1px solid rgba(255,59,48,.15)", borderRadius: 8, cursor: "pointer", padding: "8px 0", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontWeight: 500 }}>
+            <button onClick={() => { supabase.auth.signOut(); localStorage.removeItem("gni_session"); }} style={{ marginTop: 10, width: "100%", fontSize: 12, color: "#FF3B30", background: "rgba(255,59,48,.06)", border: "1px solid rgba(255,59,48,.15)", borderRadius: 8, cursor: "pointer", padding: "8px 0", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontWeight: 500 }}>
               <LogOut size={12} /> Déconnexion
             </button>
           </div>
@@ -2274,22 +2313,20 @@ export default function GNIApp() {
                   </div>
 
                   <div>
-                    <div style={{ display: "flex", borderBottom: "1px solid #e5e5ea", marginBottom: 10 }}>
-                      {[{ key: "email", label: "Email", Icon: Mail }, { key: "sms", label: "SMS", Icon: MessageSquare }].map(tab => (
-                        <button key={tab.key} onClick={() => setRelanceMsgTab(tab.key)}
-                          style={{ flex: 1, padding: "8px 0", border: "none", borderBottom: `2px solid ${relanceMsgTab === tab.key ? "#0071e3" : "transparent"}`, background: "none", color: relanceMsgTab === tab.key ? "#0071e3" : "#86868b", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, transition: "all .15s" }}>
-                          <tab.Icon size={13} /> {tab.label}
-                        </button>
-                      ))}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .8, textTransform: "uppercase" }}>Message</div>
+                      <div style={{ display: "flex", gap: 4, background: "#f2f2f7", borderRadius: 8, padding: 2 }}>
+                        {[{ key: "email", label: "Email", Icon: Mail }, { key: "sms", label: "SMS", Icon: MessageSquare }].map(({ key, label, Icon: TabIcon }) => (
+                          <button key={key} onClick={() => setRelanceMsgTab(key)}
+                            style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 6, border: "none", background: relanceMsgTab === key ? "white" : "transparent", color: relanceMsgTab === key ? "#0071e3" : "#86868b", fontSize: 11, fontWeight: 600, cursor: "pointer", boxShadow: relanceMsgTab === key ? "0 1px 3px rgba(0,0,0,.1)" : "none", transition: "all .2s" }}>
+                            <TabIcon size={12} /> {label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     <div style={{ position: "relative" }}>
-                      <textarea
-                        value={relanceMsgTab === "sms" ? (tpl.smsMessage || "") : tpl.message}
-                        onChange={(e) => {
-                          const field = relanceMsgTab === "sms" ? "smsMessage" : "message";
-                          setRelanceTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, [field]: e.target.value } : t));
-                        }}
-                        style={{ width: "100%", padding: "13px 14px", borderRadius: 12, border: "1px solid #d1d1d6", fontSize: 13, color: isGenerating ? "#86868b" : "#1d1d1f", resize: "none", height: 90, boxSizing: "border-box", outline: "none", lineHeight: 1.6, background: isGenerating ? "#f9f9fb" : "white" }}
+                      <textarea value={relanceMsgTab === "sms" ? (tpl.smsMessage || "") : tpl.message} onChange={(e) => { const field = relanceMsgTab === "sms" ? "smsMessage" : "message"; setRelanceTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, [field]: e.target.value } : t)); }}
+                        style={{ width: "100%", padding: "13px 14px", borderRadius: 12, border: "1px solid #d1d1d6", fontSize: 13, color: isGenerating ? "#86868b" : "#1d1d1f", resize: "none", height: relanceMsgTab === "sms" ? 60 : 90, boxSizing: "border-box", outline: "none", lineHeight: 1.6, background: isGenerating ? "#f9f9fb" : "white" }}
                         disabled={isGenerating} />
                       {isGenerating && (
                         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 12, background: "rgba(255,255,255,.7)", backdropFilter: "blur(2px)" }}>
@@ -2300,12 +2337,11 @@ export default function GNIApp() {
                       )}
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                        {relanceMsgTab === "email"
-                          ? <span style={{ fontSize: 11, color: "#aeaeb2" }}>Variables : <strong style={{ color: "#86868b" }}>{"{civilite} {nom}"}</strong> · <strong style={{ color: "#86868b" }}>{"{documents_manquants}"}</strong></span>
-                          : <><span style={{ fontSize: 11, color: "#aeaeb2" }}>Variables : <strong style={{ color: "#86868b" }}>{"{civilite} {nom}"}</strong></span><span style={{ fontSize: 10, color: (tpl.smsMessage || "").length > 160 ? "#FF3B30" : "#aeaeb2" }}>{(tpl.smsMessage || "").length}/160 caractères</span></>
-                        }
-                      </div>
+                      <span style={{ fontSize: 11, color: "#aeaeb2" }}>
+                        {relanceMsgTab === "sms"
+                          ? <><strong style={{ color: (tpl.smsMessage || "").length > 160 ? "#FF3B30" : "#86868b" }}>{(tpl.smsMessage || "").length}/160</strong> car.</>
+                          : <>Variables : <strong style={{ color: "#86868b" }}>{"{civilite} {nom}"}</strong> · <strong style={{ color: "#86868b" }}>{"{documents_manquants}"}</strong></>}
+                      </span>
                       <button onClick={() => generateMessage(tpl.id, tpl.delay, relanceMsgTab)} disabled={isGenerating}
                         style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 10, border: "none", background: isGenerating ? "#f2f2f7" : "linear-gradient(135deg,#6e40c9,#0071e3)", color: isGenerating ? "#aeaeb2" : "white", fontSize: 12, fontWeight: 600, cursor: isGenerating ? "default" : "pointer", boxShadow: isGenerating ? "none" : "0 2px 10px rgba(110,64,201,.3)", whiteSpace: "nowrap" }}>
                         {isGenerating ? <Loader size={12} /> : <Sparkles size={12} />}
@@ -2426,22 +2462,20 @@ export default function GNIApp() {
                   </div>
 
                   <div>
-                    <div style={{ display: "flex", borderBottom: "1px solid #e5e5ea", marginBottom: 10 }}>
-                      {[{ key: "email", label: "Email", Icon: Mail }, { key: "sms", label: "SMS", Icon: MessageSquare }].map(tab => (
-                        <button key={tab.key} onClick={() => setProspectMsgTab(tab.key)}
-                          style={{ flex: 1, padding: "8px 0", border: "none", borderBottom: `2px solid ${prospectMsgTab === tab.key ? "#FF9F0A" : "transparent"}`, background: "none", color: prospectMsgTab === tab.key ? "#FF9F0A" : "#86868b", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, transition: "all .15s" }}>
-                          <tab.Icon size={13} /> {tab.label}
-                        </button>
-                      ))}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: "#86868b", letterSpacing: .8, textTransform: "uppercase" }}>Message</div>
+                      <div style={{ display: "flex", gap: 4, background: "#f2f2f7", borderRadius: 8, padding: 2 }}>
+                        {[{ key: "email", label: "Email", Icon: Mail }, { key: "sms", label: "SMS", Icon: MessageSquare }].map(({ key, label, Icon: TabIcon }) => (
+                          <button key={key} onClick={() => setProspectMsgTab(key)}
+                            style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 6, border: "none", background: prospectMsgTab === key ? "white" : "transparent", color: prospectMsgTab === key ? "#FF9F0A" : "#86868b", fontSize: 11, fontWeight: 600, cursor: "pointer", boxShadow: prospectMsgTab === key ? "0 1px 3px rgba(0,0,0,.1)" : "none", transition: "all .2s" }}>
+                            <TabIcon size={12} /> {label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     <div style={{ position: "relative" }}>
-                      <textarea
-                        value={prospectMsgTab === "sms" ? (tpl.smsMessage || "") : tpl.message}
-                        onChange={(e) => {
-                          const field = prospectMsgTab === "sms" ? "smsMessage" : "message";
-                          setProspectTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, [field]: e.target.value } : t));
-                        }}
-                        style={{ width: "100%", padding: "13px 14px", borderRadius: 12, border: "1px solid #d1d1d6", fontSize: 13, color: generatingId === "p-" + tpl.id ? "#86868b" : "#1d1d1f", resize: "none", height: 90, boxSizing: "border-box", outline: "none", lineHeight: 1.6, background: generatingId === "p-" + tpl.id ? "#f9f9fb" : "white" }}
+                      <textarea value={prospectMsgTab === "sms" ? (tpl.smsMessage || "") : tpl.message} onChange={(e) => { const field = prospectMsgTab === "sms" ? "smsMessage" : "message"; setProspectTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, [field]: e.target.value } : t)); }}
+                        style={{ width: "100%", padding: "13px 14px", borderRadius: 12, border: "1px solid #d1d1d6", fontSize: 13, color: generatingId === "p-" + tpl.id ? "#86868b" : "#1d1d1f", resize: "none", height: prospectMsgTab === "sms" ? 60 : 90, boxSizing: "border-box", outline: "none", lineHeight: 1.6, background: generatingId === "p-" + tpl.id ? "#f9f9fb" : "white" }}
                         disabled={generatingId === "p-" + tpl.id} />
                       {generatingId === "p-" + tpl.id && (
                         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 12, background: "rgba(255,255,255,.7)", backdropFilter: "blur(2px)" }}>
@@ -2452,12 +2486,11 @@ export default function GNIApp() {
                       )}
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                        {prospectMsgTab === "email"
-                          ? <span style={{ fontSize: 11, color: "#aeaeb2" }}>Variables : <strong style={{ color: "#86868b" }}>{"{civilite} {nom}"}</strong> · <strong style={{ color: "#86868b" }}>{"{documents_manquants}"}</strong></span>
-                          : <><span style={{ fontSize: 11, color: "#aeaeb2" }}>Variables : <strong style={{ color: "#86868b" }}>{"{civilite} {nom}"}</strong></span><span style={{ fontSize: 10, color: (tpl.smsMessage || "").length > 160 ? "#FF3B30" : "#aeaeb2" }}>{(tpl.smsMessage || "").length}/160 caractères</span></>
-                        }
-                      </div>
+                      <span style={{ fontSize: 11, color: "#aeaeb2" }}>
+                        {prospectMsgTab === "sms"
+                          ? <><strong style={{ color: (tpl.smsMessage || "").length > 160 ? "#FF3B30" : "#86868b" }}>{(tpl.smsMessage || "").length}/160</strong> car.</>
+                          : <>Variables : <strong style={{ color: "#86868b" }}>{"{civilite} {nom}"}</strong> · <strong style={{ color: "#86868b" }}>{"{documents_manquants}"}</strong></>}
+                      </span>
                       <button onClick={() => generateProspectMessage(tpl.id, tpl.delay, prospectMsgTab)} disabled={generatingId === "p-" + tpl.id}
                         style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 10, border: "none", background: generatingId === "p-" + tpl.id ? "#f2f2f7" : "linear-gradient(135deg,#FF9F0A,#FF6723)", color: generatingId === "p-" + tpl.id ? "#aeaeb2" : "white", fontSize: 12, fontWeight: 600, cursor: generatingId === "p-" + tpl.id ? "default" : "pointer", boxShadow: generatingId === "p-" + tpl.id ? "none" : "0 2px 10px rgba(255,159,10,.3)", whiteSpace: "nowrap" }}>
                         {generatingId === "p-" + tpl.id ? <Loader size={12} /> : <Sparkles size={12} />}
@@ -2477,10 +2510,6 @@ export default function GNIApp() {
 
         {/* ── TEAM ── */}
         {view === "team" && currentUser.role === "admin" && (() => {
-          const genPassword = () => {
-            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!";
-            return Array.from({length: 12}, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-          };
           return (
             <div>
               <div style={{ marginBottom: 24 }}>
@@ -2491,7 +2520,7 @@ export default function GNIApp() {
               {/* Edit/manage modal */}
               {editingMember && (
                 <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(6px)" }}>
-                  <div style={{ background: "white", borderRadius: 24, padding: 0, width: isMobile ? "95vw" : 480, boxShadow: "0 24px 64px rgba(0,0,0,.2)", overflow: "hidden", maxHeight: "90vh", overflowY: "auto" }}>
+                  <div style={{ background: "white", borderRadius: 24, padding: 0, width: isMobile ? "95vw" : 480, boxShadow: "0 24px 64px rgba(0,0,0,.2)", maxHeight: "90vh", overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
                     {/* Modal header */}
                     <div style={{ padding: "24px 28px 20px", borderBottom: "1px solid #f2f2f7", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: "#1d1d1f" }}>Gérer le profil</h2>
@@ -2547,36 +2576,14 @@ export default function GNIApp() {
                         </div>
                       ))}
 
-                      {/* Password section */}
-                      <div style={{ background: editingMember._isAdmin ? "#fff8f0" : "#f8f9ff", border: `1px solid ${editingMember._isAdmin ? "#fed7aa" : "#e0e7ff"}`, borderRadius: 14, padding: "16px 18px", marginTop: 20, marginBottom: 20 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: editingMember._isAdmin ? "#c2410c" : "#3730a3", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                          <Lock size={13} /> {editingMember._isAdmin ? "Mot de passe administrateur" : "Mot de passe de l'espace sécurisé"}
+                      {/* Password info */}
+                      <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 14, padding: "16px 18px", marginTop: 20, marginBottom: 20 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "#166534", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                          <Lock size={13} /> Mot de passe sécurisé
                         </div>
-                        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 10 }}>
-                          Modifiez le mot de passe ou conservez l'actuel.
+                        <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.5 }}>
+                          Les mots de passe sont gérés de manière sécurisée par Supabase Auth. Chaque conseiller peut changer son mot de passe depuis son profil.
                         </div>
-                        <div style={{ position: "relative", marginBottom: 10 }}>
-                          <input
-                            type={editingMember._showPwd ? "text" : "password"}
-                            value={editingMember.password || ""}
-                            onChange={(e) => setEditingMember((prev) => ({ ...prev, password: e.target.value }))}
-                            placeholder="Mot de passe"
-                            style={{ display: "block", width: "100%", padding: "11px 40px 11px 14px", borderRadius: 10, border: "1px solid #d1d1d6", fontSize: 14, outline: "none", boxSizing: "border-box" }}
-                          />
-                          <button onClick={() => setEditingMember((prev) => ({ ...prev, _showPwd: !prev._showPwd }))}
-                            style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#86868b" }}>
-                            {editingMember._showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
-                          </button>
-                        </div>
-                        {!editingMember._isAdmin && (
-                          <button onClick={() => {
-                            const pwd = genPassword();
-                            setEditingMember((prev) => ({ ...prev, password: pwd, _showPwd: true }));
-                            showNotif("Mot de passe généré !");
-                          }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "none", background: "linear-gradient(135deg,#6e40c9,#0071e3)", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                            <RefreshCw size={12} /> Générer un mot de passe aléatoire
-                          </button>
-                        )}
                       </div>
 
                       {/* Danger zone — disable access (advisors only) */}
@@ -2633,8 +2640,14 @@ export default function GNIApp() {
                           </div>
                           {editingMember._driveConnected ? (
                             <div>
-                              <div style={{ fontSize: 12, color: "#22c55e", display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                                <CheckCircle size={13} /> Connecté : {editingMember._driveEmail}
+                              <div style={{ fontSize: 12, color: "#22c55e", display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                                <CheckCircle size={13} /> Drive connecté : {editingMember._driveEmail}
+                              </div>
+                              <div style={{ fontSize: 11, color: editingMember._gmailEnabled ? "#22c55e" : "#f59e0b", display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                                {editingMember._gmailEnabled
+                                  ? <><CheckCircle size={11} /> Envoi email Gmail activé</>
+                                  : <><AlertCircle size={11} /> Gmail non activé — cliquer Reconnecter</>
+                                }
                               </div>
                               <div style={{ display: "flex", gap: 8 }}>
                                 <input
@@ -2666,12 +2679,13 @@ export default function GNIApp() {
 
                       <div style={{ display: "flex", gap: 10 }}>
                         <button onClick={() => setEditingMember(null)} style={{ flex: 1, padding: "12px 0", borderRadius: 10, border: "1px solid #d1d1d6", background: "white", fontSize: 14, cursor: "pointer", color: "#3a3a3c" }}>Annuler</button>
-                        <button onClick={() => {
+                        <button onClick={async () => {
                           const { generatedPassword, _isAdmin, _showAdminPwd, _showPwd, ...toSave } = editingMember;
                           if (_isAdmin) {
                             setAdminProfile(toSave);
                             setCurrentUser((prev) => ({ ...prev, name: toSave.firstName }));
                             localStorage.setItem("gni_session", JSON.stringify({ role: "admin", name: toSave.firstName }));
+                            supabase.auth.updateUser({ data: { name: toSave.firstName } });
                           } else {
                             setTeam((prev) => prev.map((m) => m.id === toSave.id ? toSave : m));
                           }
@@ -2726,12 +2740,12 @@ export default function GNIApp() {
                         <div style={{ position: "absolute", top: 12, left: 12, background: "#FF3B30", color: "white", fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 20, letterSpacing: .5, textTransform: "uppercase" }}>Accès désactivé</div>
                       )}
                       <button onClick={async () => {
-                        const m = { ...member, generatedPassword: null, _driveConnected: false, _driveEmail: "" };
+                        const m = { ...member, generatedPassword: null, _driveConnected: false, _driveEmail: "", _gmailEnabled: false };
                         setEditingMember(m);
                         try {
-                          const r = await fetch(`/api/google-status?advisorId=${encodeURIComponent(member.id)}`, { headers: apiHeaders() });
+                          const r = await fetch(`/api/google-status?advisorId=${encodeURIComponent(member.id)}`, { headers: await apiHeaders() });
                           const d = await r.json();
-                          if (d.connected) setEditingMember(prev => prev?.id === member.id ? { ...prev, _driveConnected: true, _driveEmail: d.email } : prev);
+                          if (d.connected) setEditingMember(prev => prev?.id === member.id ? { ...prev, _driveConnected: true, _driveEmail: d.email, _gmailEnabled: !!d.gmailEnabled } : prev);
                         } catch(e) { console.error("Drive status check error:", e); }
                       }}
                         style={{ position: "absolute", top: 14, right: 14, width: 32, height: 32, borderRadius: 8, border: "none", background: "#f2f2f7", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#86868b", transition: "all .15s" }}
@@ -3090,7 +3104,7 @@ export default function GNIApp() {
                   };
                   // Insert into clients table in Supabase
                   try {
-                    await sb.from("clients").upsert({
+                    await supabase.from("clients").upsert({
                       id: newClient.id, name: newClient.name, civility: newClient.civility,
                       contact_first_name: newClient.contactFirstName, contact: newClient.contact,
                       email: newClient.email, phone: newClient.phone, advisor: newClient.advisor,
@@ -3374,6 +3388,27 @@ export default function GNIApp() {
           );
         })()}
 
+        {view === "profile" && currentUser.role === "admin" && (
+          <div style={{ maxWidth: isMobile ? "100%" : 520 }}>
+            <div style={{ marginBottom: 24 }}>
+              <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 700, color: "#1d1d1f", margin: 0, letterSpacing: -.5 }}>Mon profil</h1>
+              <p style={{ color: "#86868b", fontSize: 14, margin: "4px 0 0" }}>Administrateur</p>
+            </div>
+            <div style={{ background: "white", borderRadius: 20, padding: 28, boxShadow: "0 2px 16px rgba(0,0,0,.07)", marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 14, background: "linear-gradient(135deg,#2d7dd2,#48b5e0)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Crown size={22} color="white" />
+                </div>
+                <div>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: "#1d1d1f" }}>{currentUser.name}</div>
+                  <div style={{ fontSize: 13, color: "#86868b" }}>Administrateur</div>
+                </div>
+              </div>
+            </div>
+            <ChangePasswordCard member={null} setTeam={setTeam} showNotif={showNotif} />
+          </div>
+        )}
+
         {view === "profile" && currentUser.role === "advisor" && (() => {
           const member = team.find((m) => m.firstName === currentUser.name);
           if (!member) return null;
@@ -3479,8 +3514,14 @@ export default function GNIApp() {
                 </p>
                 {profileDriveStatus.connected ? (
                   <div>
-                    <div style={{ fontSize: 13, color: "#22c55e", display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
-                      <CheckCircle size={14} /> Connecté : {profileDriveStatus.email}
+                    <div style={{ fontSize: 13, color: "#22c55e", display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <CheckCircle size={14} /> Drive connecté : {profileDriveStatus.email}
+                    </div>
+                    <div style={{ fontSize: 12, color: profileDriveStatus.gmailEnabled ? "#22c55e" : "#f59e0b", display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+                      {profileDriveStatus.gmailEnabled
+                        ? <><CheckCircle size={12} /> Envoi email Gmail activé</>
+                        : <><AlertCircle size={12} /> Gmail non activé — cliquer Reconnecter</>
+                      }
                     </div>
                     {isEditing ? (
                       <div>
@@ -3499,8 +3540,17 @@ export default function GNIApp() {
                         <div style={{ fontSize: 11, color: "#aeaeb2", marginTop: 6 }}>Collez l'ID d'un dossier Drive spécifique, ou laissez vide pour la racine.</div>
                       </div>
                     ) : (
-                      <div style={{ padding: "11px 14px", borderRadius: 10, background: "#f5f5f7", fontSize: 13, color: "#6b7280" }}>
-                        {member.googleDriveFolderId ? `Dossier : ${member.googleDriveFolderId}` : "Dossier : racine du Drive"}
+                      <div>
+                        <div style={{ padding: "11px 14px", borderRadius: 10, background: "#f5f5f7", fontSize: 13, color: "#6b7280", marginBottom: !profileDriveStatus.gmailEnabled ? 10 : 0 }}>
+                          {member.googleDriveFolderId ? `Dossier : ${member.googleDriveFolderId}` : "Dossier : racine du Drive"}
+                        </div>
+                        {!profileDriveStatus.gmailEnabled && (
+                          <button onClick={() => {
+                            window.open(`/api/google-auth?advisorId=${encodeURIComponent(member.id)}${API_SECRET ? `&secret=${API_SECRET}` : ""}`, "_blank", "width=500,height=600");
+                          }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                            <Link size={13} /> Reconnecter Google (activer Gmail)
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -3619,12 +3669,21 @@ function ChangePasswordCard({ member, setTeam, showNotif }) {
   const [showNew,     setShowNew]     = useState(false);
   const [error,       setError]       = useState("");
 
-  const handleChange = () => {
+  const handleChange = async () => {
     setError("");
-    if (currentPwd !== member.password) { setError("Le mot de passe actuel est incorrect."); return; }
     if (newPwd.length < 8)              { setError("Le nouveau mot de passe doit contenir au moins 8 caractères."); return; }
     if (newPwd !== confirmPwd)          { setError("Les deux mots de passe ne correspondent pas."); return; }
-    setTeam((prev) => prev.map((m) => m.id === member.id ? { ...m, password: newPwd } : m));
+
+    // Vérifier l'ancien mot de passe en tentant de se reconnecter
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setError("Session expirée, reconnectez-vous."); return; }
+    const { error: verifyErr } = await supabase.auth.signInWithPassword({ email: session.user.email, password: currentPwd });
+    if (verifyErr) { setError("Le mot de passe actuel est incorrect."); return; }
+
+    // Changer le mot de passe via Supabase Auth
+    const { error: updateErr } = await supabase.auth.updateUser({ password: newPwd });
+    if (updateErr) { setError(updateErr.message); return; }
+
     setCurrentPwd(""); setNewPwd(""); setConfirmPwd("");
     showNotif("Mot de passe mis à jour !");
   };
