@@ -1384,7 +1384,7 @@ export default function GNIApp() {
               </button>
             ))}
           </nav>
-          <div style={{ padding: 12, borderRadius: 12, background: "rgba(0,113,227,.06)", border: "1px solid rgba(0,113,227,.10)" }}>
+          <div style={{ marginTop: "auto", marginBottom: 24, padding: 12, borderRadius: 12, background: "rgba(0,113,227,.06)", border: "1px solid rgba(0,113,227,.10)" }}>
             <div style={{ fontSize: 11, color: "#86868b", marginBottom: 4 }}>Connecté</div>
             <div style={{ fontSize: 13, fontWeight: 700, color: "#1d1d1f", display: "flex", alignItems: "center", gap: 6 }}>
               {currentUser.role === "admin" ? <Crown size={13} color="#FF9F0A" /> : <User size={13} color="#0071e3" />}
